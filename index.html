@@ -1404,6 +1404,25 @@ function createFallbackSound(name) {
         function handleKeyPress(e) {
     console.log(`Key pressed: ${e.key} in game state: ${gameState}`);
     
+    // Sjekk først om highscore input er åpen og aktiv
+    const highscoreInput = document.getElementById('highscoreInput');
+    const nameInput = document.getElementById('playerNameInput');
+    
+    // Hvis vi er i input-modus, avbryt all vanlig tastenavigasjon
+    if (highscoreInput && !highscoreInput.classList.contains('hidden') && 
+        document.activeElement === nameInput) {
+        // Tillat bare Enter eller Escape for å sende/avbryte
+        if (e.key === 'Enter') {
+            // Sende skår
+            submitHighscore();
+        } else if (e.key === 'Escape') {
+            // Eventuelt avbryt, eller bare la vanlig inputboks-atferd håndtere dette
+        }
+        // Ikke prosesser andre taster for spillnavigasjon
+        return;
+    }
+    
+    // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
     switch(gameState) {
         case 'start':
             if (e.key === 'Enter' || e.key === ' ') {
