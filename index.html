@@ -307,6 +307,44 @@
         cursor: pointer;
         text-shadow: 0 0 5px #39FF14;
     }
+    #highscoreList {
+    width: 90%;
+    max-width: 800px;
+    margin: 0 auto 30px auto;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(57, 255, 20, 0.3);
+}
+
+.highscore-item {
+    display: grid;
+    grid-template-columns: 0.7fr 2fr 1fr 0.7fr;
+    padding: 8px 0;
+    margin-bottom: 5px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Styling for scrollbar */
+#highscoreList::-webkit-scrollbar {
+    width: 10px;
+}
+
+#highscoreList::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+}
+
+#highscoreList::-webkit-scrollbar-thumb {
+    background: #39FF14;
+    border-radius: 5px;
+}
+
+#highscoreList::-webkit-scrollbar-thumb:hover {
+    background: #FFFF66;
+}
     
     /* Add improved animations for text pulsing */
     @keyframes textPulse {
@@ -403,7 +441,27 @@
             <div id="moveRightBtn">→</div>
         </div>
     </div>
+    <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
+<script>
+  // Din Firebase konfigurasjon
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHQSa-gRonCbOS-y8eGyq9gQEY9ritBNY",
+    authDomain: "evil-invaders-ii.firebaseapp.com",
+    projectId: "evil-invaders-ii",
+    storageBucket: "evil-invaders-ii.firebasestorage.app",
+    messagingSenderId: "354911968962",
+    appId: "1:354911968962:web:9dbab52240137e8a85655b"
+  };
+
+  // Initialiser Firebase
+  firebase.initializeApp(firebaseConfig);
+
+  // Få en Firestore instans
+  const db = firebase.firestore();
+</script>
     <script>
         // Game Constants
         const SCREEN_WIDTH = 800;
@@ -3818,85 +3876,131 @@ function startScreenRotation() {
 }
 // Initialize the animations when window loads
 window.addEventListener('load', addVictoryAnimations);
-        function gameOver() {
+        
+function gameOver() {
     console.log("Game over!");
     cancelAnimationFrame(gameLoop);
     
-    // Check if score qualifies for highscore
-    const isHighscore = highscores.length < 10 || score > highscores[highscores.length - 1].score;
+    // Last inn de nyeste highscores først
+    loadHighscores();
     
-    if (isHighscore) {
-        // Sørg for at animasjonene er definert
-        if (!document.getElementById('highscore-animation-style')) {
-            const style = document.createElement('style');
-            style.id = 'highscore-animation-style';
-            style.textContent = `
-                @keyframes textPulse {
-                    0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #39FF14, 0 0 20px #39FF14; opacity: 1; }
-                    50% { text-shadow: 0 0 2px #fff, 0 0 5px #39FF14; opacity: 0.7; }
-                    100% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #39FF14, 0 0 20px #39FF14; opacity: 1; }
-                }
-                
-                .highscore-animation {
-                    font-size: 1.5rem;
-                    text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #39FF14, 0 0 20px #39FF14;
-                    animation: textPulse 0.8s infinite alternate;
-                    margin-bottom: 15px;
-                    letter-spacing: 2px;
-                }
-            `;
-            document.head.appendChild(style);
+    // Deretter sjekk om scoren kvalifiserer, med en kort forsinkelse
+    // for å sikre at highscores er lastet
+    setTimeout(() => {
+        // Sjekk om score kvalifiserer som highscore
+        const isHighscore = checkHighscore(score);
+        
+        if (isHighscore) {
+            // Sørg for at animasjonene er definert
+            if (!document.getElementById('highscore-animation-style')) {
+                const style = document.createElement('style');
+                style.id = 'highscore-animation-style';
+                style.textContent = `
+                    @keyframes textPulse {
+                        0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #39FF14, 0 0 20px #39FF14; opacity: 1; }
+                        50% { text-shadow: 0 0 2px #fff, 0 0 5px #39FF14; opacity: 0.7; }
+                        100% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #39FF14, 0 0 20px #39FF14; opacity: 1; }
+                    }
+                    
+                    .highscore-animation {
+                        font-size: 1.5rem;
+                        text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #39FF14, 0 0 20px #39FF14;
+                        animation: textPulse 0.8s infinite alternate;
+                        margin-bottom: 15px;
+                        letter-spacing: 2px;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Vis highscore input
+            document.getElementById('highscoreInput').classList.remove('hidden');
+            
+            // Framhev NEW HIGHSCORE! teksten med animasjon
+            const highscoreText = document.querySelector('#highscoreInput .neon-text');
+            highscoreText.textContent = 'GLOBAL HIGHSCORE!';
+            highscoreText.classList.add('highscore-animation');
+            
+            // Spill en spesiell lyd for ny highscore
+            if (gameSounds.powerup) {
+                gameSounds.powerup.play();
+            }
+            
+            // Fokuser på input-feltet
+            setTimeout(() => {
+                document.getElementById('playerNameInput').focus();
+            }, 200);
+        } else {
+            // Ikke en highscore, bare vis highscores-skjermen
+            showHighscores();
+            startScreenRotation();
         }
         
-        // Show highscore input
-        document.getElementById('highscoreInput').classList.remove('hidden');
-        
-        // Framhev NEW HIGHSCORE! teksten med animasjon
-        const highscoreText = document.querySelector('#highscoreInput .neon-text');
-        highscoreText.textContent = 'NEW HIGHSCORE!';
-        highscoreText.classList.add('highscore-animation');
-        
-        // Spill en spesiell lyd for ny highscore
-        if (gameSounds.powerup) {
-            gameSounds.powerup.play();
-        }
-        
-        // Fokuser på input-feltet
-        setTimeout(() => {
-            document.getElementById('playerNameInput').focus();
-        }, 200);
-    }
-    
-    // Show game over screen
-    showScreen('gameOver');
-    startScreenRotation();
+        // Vis game over screen
+        showScreen('gameOver');
+    }, 500);
 }
-        function submitHighscore() {
-            const playerName = document.getElementById('playerNameInput').value.trim() || 'PLAYER';
+
+function submitHighscore() {
+    const playerName = document.getElementById('playerNameInput').value.trim() || 'PLAYER';
+    const timestamp = new Date().toISOString();
+    
+    // Sanitiser spillernavnet (fjern uønskede tegn)
+    const sanitizedName = playerName.replace(/[^\w\s]/gi, '').substring(0, 15);
+    
+    // Opprett highscore-objekt
+    const highscoreData = {
+        name: sanitizedName,
+        score: score,
+        level: level,
+        date: timestamp,
+        // Valgfritt: legg til hvilket nivå spilleren nådde
+        // og hvilken versjon av spillet som ble spilt
+        gameVersion: "1.0"
+    };
+    
+    console.log("Submitting highscore:", highscoreData);
+    
+    // Lagre til Firebase
+    db.collection("highscores").add(highscoreData)
+        .then((docRef) => {
+            console.log("Highscore saved with ID:", docRef.id);
             
-            // Add new highscore
-            highscores.push({ name: playerName, score: score });
+            // Last inn oppdaterte highscores
+            loadHighscores();
             
-            // Sort highscores
-            highscores.sort((a, b) => b.score - a.score);
-            
-            // Keep only top 10
-            highscores = highscores.slice(0, 10);
-            
-            // Save to local storage
-            saveHighscores();
-            
-            // Hide input form
+            // Skjul input-skjema
             document.getElementById('highscoreInput').classList.add('hidden');
             
             isNewHighscore = false;
-
-            // Show highscores screen
+            
+            // Vis highscores-skjerm
             showHighscores();
+            
+            // Start skjermrotasjon
             startScreenRotation();
-
-        }
-
+        })
+        .catch((error) => {
+            console.error("Error adding highscore:", error);
+            
+            // Fallback til lokal lagring hvis Firebase feiler
+            highscores.push(highscoreData);
+            highscores.sort((a, b) => b.score - a.score);
+            highscores = highscores.slice(0, 20);
+            localStorage.setItem('evilInvadersHighscores', JSON.stringify(highscores));
+            
+            // Skjul input-skjema
+            document.getElementById('highscoreInput').classList.add('hidden');
+            
+            isNewHighscore = false;
+            
+            // Vis highscores-skjerm
+            showHighscores();
+            
+            // Start skjermrotasjon
+            startScreenRotation();
+        });
+}
         function showHighscores() {
     console.log("Showing highscores screen");
     
@@ -3939,44 +4043,60 @@ function displayHighscores() {
     // Create header
     const header = document.createElement('div');
     header.className = 'highscore-item';
-    header.innerHTML = '<span>RANK</span><span>NAME</span><span>SCORE</span>';
+    header.innerHTML = '<span>RANK</span><span>NAME</span><span>SCORE</span><span>LEVEL</span>';
     header.style.color = COLORS.NEON_GREEN;
     header.style.textShadow = `0 0 8px ${COLORS.NEON_GREEN}, 0 0 12px ${COLORS.NEON_GREEN}`;
     header.style.marginBottom = '10px';
     header.style.borderBottom = `2px solid ${COLORS.NEON_GREEN}`;
     header.style.fontWeight = 'bold';
+    header.style.display = 'grid';
+    header.style.gridTemplateColumns = '0.7fr 2fr 1fr 0.7fr';
     highscoreList.appendChild(header);
     
-    
-    // Neon farger for highscores
+    // Neon farger for topp 20
     const neonColors = [
-        COLORS.NEON_PINK,    // 1st plass
-        COLORS.NEON_YELLOW,  // 2nd plass
-        COLORS.NEON_GREEN,   // 3rd plass
-        COLORS.CYAN,         // 4th plass
-        COLORS.NEON_YELLOW,  // 5th plass
+        COLORS.NEON_PINK,    // 1st plass - Neon rosa
+        COLORS.NEON_YELLOW,  // 2nd plass - Neon gul
+        COLORS.NEON_GREEN,   // 3rd plass - Neon grønn
+        COLORS.CYAN,         // 4th plass - Cyan
+        COLORS.NEON_YELLOW,  // 5th plass - Neon gul
         COLORS.NEON_PINK,    // osv.
         COLORS.NEON_GREEN,
         COLORS.CYAN,
         COLORS.NEON_YELLOW,
-        COLORS.NEON_PINK
+        COLORS.NEON_PINK,
+        // For plassene 11-20
+        '#FF9966', // Lysoransje
+        '#66FFFF', // Lysere cyan
+        '#CCFF99', // Lysegrønn
+        '#FF99CC', // Lysrosa
+        '#99CCFF', // Lyseblå
+        '#FFCC99', // Fersken
+        '#CCFFFF', // Svært lys cyan
+        '#FFFFCC', // Svært lys gul
+        '#FFCCFF', // Svært lys rosa
+        '#CCCCFF'  // Svært lys lilla
     ];
     
-    // Finn den nyeste highscoren (hvis vi nettopp har lagt til en)
-    let newScore = null;
-    if (document.getElementById('playerNameInput') && gameState === 'highscores') {
-        const playerName = document.getElementById('playerNameInput').value.trim() || 'PLAYER';
-        // Sjekk om vi nettopp har lagt til en highscore
-        const matchingScores = highscores.filter(s => s.name === playerName && s.score === score);
-        if (matchingScores.length > 0) {
-            newScore = matchingScores[0];
-        }
+    // Finn om spilleren nettopp har lagt inn en highscore
+    let playerName = '';
+    if (document.getElementById('playerNameInput')) {
+        playerName = document.getElementById('playerNameInput').value.trim() || 'PLAYER';
     }
     
-    // Add each highscore
+    // Legg til hver highscore
     highscores.forEach((scoreEntry, index) => {
+        if (index >= 20) return; // Bare vis topp 20
+        
         const item = document.createElement('div');
         item.className = 'highscore-item';
+        
+        // Oppdater styling for grid
+        item.style.display = 'grid';
+        item.style.gridTemplateColumns = '0.7fr 2fr 1fr 0.7fr';
+        item.style.padding = '8px 0';
+        item.style.marginBottom = '5px';
+        item.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
         
         // Sett forsinkelse for animasjon
         item.style.setProperty('--delay', index.toString());
@@ -3988,37 +4108,59 @@ function displayHighscores() {
         else if (index === 2) rankText = '3RD';
         else rankText = `${index + 1}TH`;
         
-        // Set neon color
+        // Set neon color basert på plassering
         const neonColor = neonColors[index % neonColors.length];
         item.style.color = neonColor;
         
         // Forbedret tekstskygge-effekt
         item.style.textShadow = `0 0 5px ${neonColor}, 0 0 10px ${neonColor}, 0 0 15px rgba(255,255,255,0.5)`;
         
-        // Sjekk om dette er en ny highscore
-        const isNewHighscore = newScore && scoreEntry.name === newScore.name && scoreEntry.score === newScore.score;
+        // Sjekk om dette er spillerens nye highscore
+        const isNewHighscore = scoreEntry.name === playerName && scoreEntry.score === score;
         
-        // Legg til NEW-merke for ny score
+        // Legg til NEW-merke for ny score, og vis level
+        const levelText = scoreEntry.level ? `${scoreEntry.level}` : '-';
+        
         if (isNewHighscore) {
             item.classList.add('float-item');
-            item.innerHTML = `<span>${rankText}</span><span>${scoreEntry.name} <span class="new-badge">NEW!</span></span><span>${scoreEntry.score.toLocaleString()}</span>`;
+            item.innerHTML = `
+                <span>${rankText}</span>
+                <span>${scoreEntry.name} <span class="new-badge">NEW!</span></span>
+                <span>${scoreEntry.score.toLocaleString()}</span>
+                <span>${levelText}</span>
+            `;
         } else {
-            item.innerHTML = `<span>${rankText}</span><span>${scoreEntry.name}</span><span>${scoreEntry.score.toLocaleString()}</span>`;
+            item.innerHTML = `
+                <span>${rankText}</span>
+                <span>${scoreEntry.name}</span>
+                <span>${scoreEntry.score.toLocaleString()}</span>
+                <span>${levelText}</span>
+            `;
         }
         
         highscoreList.appendChild(item);
     });
     
-    // If no highscores, show message
+    // Hvis ingen highscores, vis melding
     if (highscores.length === 0) {
         const noScores = document.createElement('div');
-        noScores.textContent = 'NO SCORES YET - BE THE FIRST!';
+        noScores.textContent = 'LOADING GLOBAL HIGHSCORES...';
         noScores.style.color = COLORS.NEON_YELLOW;
         noScores.style.textShadow = `0 0 5px ${COLORS.NEON_YELLOW}, 0 0 10px ${COLORS.NEON_YELLOW}`;
         noScores.style.textAlign = 'center';
         noScores.style.marginTop = '20px';
         highscoreList.appendChild(noScores);
     }
+    
+    // Legg til oppdateringstid
+    const updateTime = document.createElement('div');
+    updateTime.textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+    updateTime.style.fontSize = '12px';
+    updateTime.style.color = '#999';
+    updateTime.style.textAlign = 'right';
+    updateTime.style.marginTop = '15px';
+    updateTime.style.padding = '0 10px';
+    highscoreList.appendChild(updateTime);
 }
 
 // Sørg for at addFloatingAnimation er definert
@@ -4234,34 +4376,71 @@ function restartGame() {
 
             }
         }
-
         function loadHighscores() {
-            console.log("Loading highscores");
-            const savedHighscores = localStorage.getItem('evilInvadersHighscores');
-            if (savedHighscores) {
-                try {
-                    highscores = JSON.parse(savedHighscores);
-                } catch (e) {
-                    console.error("Error parsing highscores:", e);
-                    createDefaultHighscores();
-                }
-            } else {
-                createDefaultHighscores();
+    console.log("Loading highscores from Firebase");
+    
+    // Vis en laste-indikator
+    const highscoreList = document.getElementById('highscoreList');
+    if (highscoreList) {
+        highscoreList.innerHTML = '<div style="text-align: center; color: #39FF14;">LASTER HIGHSCORES...</div>';
+    }
+    
+    // Hent de 20 beste poengsummene, sortert etter score i synkende rekkefølge
+    db.collection("highscores")
+      .orderBy("score", "desc")
+      .limit(20)
+      .get()
+      .then((querySnapshot) => {
+          highscores = [];
+          querySnapshot.forEach((doc) => {
+              highscores.push(doc.data());
+          });
+          console.log("Loaded " + highscores.length + " highscores from Firebase");
+          
+          // Vis highscores hvis vi er på highscore-skjermen
+          if (gameState === 'highscores') {
+              displayHighscores();
+          }
+      })
+      .catch((error) => {
+          console.error("Error loading highscores:", error);
+          // Fallback til lokal lagring hvis Firebase feiler
+          const savedHighscores = localStorage.getItem('evilInvadersHighscores');
+          if (savedHighscores) {
+              try {
+                  highscores = JSON.parse(savedHighscores);
+              } catch (e) {
+                  console.error("Error parsing local highscores:", e);
+                  createDefaultHighscores();
+              }
+          } else {
+              createDefaultHighscores();
+          }
+      });
+}
+
+
+            function createDefaultHighscores() {
+                // Initialize with some default highscores
+                highscores = [
+                    { name: 'BOENZA', score: 5000 },
+                    { name: 'MASTER', score: 4000 },
+                    { name: 'SHOOTER', score: 3000 },
+                    { name: 'DEFENDER', score: 2000 },
+                    { name: 'ROOKIE', score: 1000 }
+                ];              
+                saveHighscores();
             }
-        }
 
-        function createDefaultHighscores() {
-            // Initialize with some default highscores
-            highscores = [
-                { name: 'BOENZA', score: 5000 },
-                { name: 'MASTER', score: 4000 },
-                { name: 'SHOOTER', score: 3000 },
-                { name: 'DEFENDER', score: 2000 },
-                { name: 'ROOKIE', score: 1000 }
-            ];
-            saveHighscores();
-        }
 
+        function checkHighscore(score) {
+    // Hvis vi har mindre enn 20 highscores, eller scoren er høyere enn den laveste highscoren
+    if (highscores.length < 20) return true;
+    
+    // Finn den laveste scoren i highscores
+    const lowestScore = Math.min(...highscores.map(hs => hs.score));
+    return score > lowestScore;
+}
         function saveHighscores() {
             localStorage.setItem('evilInvadersHighscores', JSON.stringify(highscores));
         }
