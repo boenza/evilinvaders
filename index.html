@@ -3770,7 +3770,6 @@ function startScreenRotation() {
     showScreen('gameOver');
     
     // Spill Evil Invaders.mp3 hvis den ikke allerede spilles
-    // Dette sjekker om same bakgrunnsmusikk allerede spilles
     if (!backgroundMusic || backgroundMusic.paused || 
         !backgroundMusic.src.endsWith('Evil Invaders.mp3')) {
         playBackgroundMusic(0);
@@ -3778,12 +3777,14 @@ function startScreenRotation() {
     
     // Sett opp intervall for å skifte skjerm
     screenRotationTimer = setInterval(() => {
-        // Hvis vi har en ny highscore, ikke roter før den er lagt inn
-        if (isNewHighscore && document.getElementById('highscoreInput').classList.contains('hidden') === false) {
-            return; // Ikke bytt skjerm ennå - venter på at spilleren skal legge inn navn
+        // Sjekk om highscore input er synlig - ikke roter i så fall
+        const highscoreInput = document.getElementById('highscoreInput');
+        if (highscoreInput && !highscoreInput.classList.contains('hidden')) {
+            // Highscore-skjemaet er synlig, så ikke bytt skjerm
+            return;
         }
         
-        // Roter til neste skjerm
+        // Ellers, roter til neste skjerm som vanlig
         if (currentRotationScreen === 'gameOver') {
             currentRotationScreen = 'highscores';
             showHighscores();
@@ -3793,7 +3794,6 @@ function startScreenRotation() {
         } else {
             currentRotationScreen = 'gameOver';
             showScreen('gameOver');
-            // Ikke start bakgrunnsmusikken på nytt her
         }
     }, screenRotationInterval);
 }
