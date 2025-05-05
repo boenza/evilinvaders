@@ -1480,58 +1480,54 @@ function createFallbackSound(name) {
     }
     
     // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
+       // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
     switch(gameState) {
-        case 'start':
-            if (e.key === 'Enter' || e.key === ' ') {
-                showIntroScreen();
-            }
-            break;
-        case 'intro':
-            if (!introTextComplete) {
-                // Skip to the end of the text
-                if (e.key === 'Enter' || e.key === ' ') {
-                    completeIntroText();
-                }
-            } else if (e.key === ' ' || e.key === 'Enter') {
-                // Start the game
-                startGame();
-            }
-            break;
-        case 'levelStart':
-            // Can't skip level start screen, but we could add an option here
-            break;
-        case 'playing':
-            // Game controls are handled in the game loop
-            break;
-        case 'levelComplete':
-            if (e.key === 'Enter' || e.key === ' ') {
-                nextLevel();
-            }
-            break;
-        case 'gameOver':
-            if (e.key === '1' || e.key === 'r' || e.key === 'R') {
-                restartGame();
-            } else if (e.key === '2' || e.key === 'Escape') {
-                location.reload();
-            } else if (e.key === 'h' || e.key === 'H') {
-                showHighscores();
-            }
-            break;
-            case 'credits':
-            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
-                showHighscores();
-            }
-            break;
-        case 'highscores':
-            if (e.key === 'g' || e.key === 'G' || e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
-                showScreen('gameOver');
-            }
-            break;
-        case 'victory':
-            // Any key to continue
-            endGame();
-            break;
-    }
+    case 'start':
+        // Aksepter alle taster i stedet for bare Enter og Space
+        showIntroScreen();
+        break;
+    case 'intro':
+        if (!introTextComplete) {
+            // Skip til slutten av teksten med hvilken som helst tast
+            completeIntroText();
+        } else {
+            // Start spillet med hvilken som helst tast
+            startGame();
+        }
+        break;
+    case 'levelStart':
+        // Fortsatt ingen mulighet til å hoppe over dette
+        break;
+    case 'playing':
+        // Spillkontrollene håndteres i spillets hovedløkke
+        break;
+    case 'levelComplete':
+        // Hvilken som helst tast for å fortsette til neste nivå
+        nextLevel();
+        break;
+    case 'gameOver':
+        // Beholder spesifikke taster for ulike handlinger
+        if (e.key === '1' || e.key === 'r' || e.key === 'R') {
+            restartGame();
+        } else if (e.key === '2' || e.key === 'Escape') {
+            location.reload();
+        } else if (e.key === 'h' || e.key === 'H') {
+            showHighscores();
+        }
+        break;
+    case 'credits':
+        // Hvilken som helst tast går tilbake til highscores
+        showHighscores();
+        break;
+    case 'highscores':
+        // Hvilken som helst tast går tilbake til game over-skjermen
+        showScreen('gameOver');
+        break;
+    case 'victory':
+        // Any key to continue (allerede implementert)
+        endGame();
+        break;
+}
 }
         // Definer playBackgroundMusic funksjon globalt
         function playBackgroundMusic(level) {
