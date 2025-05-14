@@ -589,6 +589,7 @@
             NEON_GREEN: '#39FF14',
             NEON_PINK: '#FF14A3'
         };
+const PERFORMANCE_MODE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         // Game Variables
         let gameCanvas, gameCtx, overlayCanvas, overlayCtx;
@@ -2637,9 +2638,23 @@ function createNewUfoRow(rowIndex, totalNewRows) {
         }
 
         function update(currentTime) {
-            // Calculate delta time
-            deltaTime = (currentTime - lastTime) / 1000; // convert to seconds
-            lastTime = currentTime;
+    // Frame rate limiting for mobile
+    if (PERFORMANCE_MODE) {
+        const fps = 50; // Redusert fra standard 60 for mobile
+        const frameInterval = 1000 / fps;
+        
+        if (currentTime - lastTime < frameInterval) {
+            gameLoop = requestAnimationFrame(update);
+            return;
+        }
+    }
+    
+    // Calculate delta time
+    deltaTime = (currentTime - lastTime) / 1000;
+    lastTime = currentTime;
+    
+    // Limit delta time to prevent big jumps
+    deltaTime = Math.min(deltaTime, 1/30); // Max 30fps delta
             
             // Clear the canvas
             gameCtx.clearRect(0, 0, gameCanvas.width, gameCanvas.height);
