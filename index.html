@@ -1093,8 +1093,12 @@ function createFallbackSound(name) {
             document.getElementById('submitScoreBtn').addEventListener('click', () => submitHighscore());
             // Legg til berøringsstøtte for mobilenheter
             function setupTouchListeners() {
-    // Legg til touch event listeners for hele dokumentet
-    document.addEventListener('touchstart', handleTouch, { passive: false });
+    // Legg til touch event listeners på de spesifikke skjermene
+    document.getElementById('startScreen').addEventListener('touchstart', handleTouch, { passive: false });
+    document.getElementById('introScreen').addEventListener('touchstart', handleTouch, { passive: false });
+    document.getElementById('levelCompleteScreen').addEventListener('touchstart', handleTouch, { passive: false });
+    document.getElementById('victoryScreen').addEventListener('touchstart', handleTouch, { passive: false });
+    document.getElementById('highscoresScreen').addEventListener('touchstart', handleTouch, { passive: false });
 }
         }
 
