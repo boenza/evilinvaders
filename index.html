@@ -29,9 +29,6 @@
             width: 100%;
             height: 100%;
         }
-        #startScreen, #introScreen, #levelCompleteScreen, #victoryScreen, #highscoresScreen, #creditsScreen {
-        cursor: pointer;
-        -webkit-tap-highlight-color: transparent;
 
         #startScreen, #introScreen, #levelStartScreen, #gameOverScreen, 
         #highscoresScreen, #levelCompleteScreen, #victoryScreen {
@@ -470,7 +467,7 @@
         const SCREEN_WIDTH = 800;
         const SCREEN_HEIGHT = 600;
         const PLAYER_WIDTH = 60;
-        const PLAYER_HEIGHT = 60;
+        const PLAYER_HEIGHT = 50;
         const UFO_WIDTH = 50;
         const UFO_HEIGHT = 30;
         const UFO_ROWS = 4;
@@ -602,10 +599,7 @@
     gameCtx = gameCanvas.getContext('2d');
     overlayCanvas = document.getElementById('overlayCanvas');
     overlayCtx = overlayCanvas.getContext('2d');
-    gameCtx.imageSmoothingEnabled = false;
-    gameCtx.imageSmoothingQuality = 'high';
-    overlayCtx.imageSmoothingEnabled = false;
-    overlayCtx.imageSmoothingQuality = 'high';
+
     // Initialize event listeners
     initEventListeners();
 
@@ -1094,33 +1088,7 @@ function createFallbackSound(name) {
             document.getElementById('highscoresBtn').addEventListener('click', () => showHighscores());
             document.getElementById('backToGameOverBtn').addEventListener('click', () => showScreen('gameOver'));
             document.getElementById('submitScoreBtn').addEventListener('click', () => submitHighscore());
-            // Legg til berøringsstøtte for mobilenheter
-            function setupTouchListeners() {
-    console.log("Setting up touch and mouse listeners");
-    
-    // Lista over alle skjermer som trenger touch support
-    const screens = [
-        'startScreen', 
-        'introScreen', 
-        'levelCompleteScreen', 
-        'victoryScreen', 
-        'highscoresScreen'
-    ];
-    
-    screens.forEach(screenId => {
-        const screen = document.getElementById(screenId);
-        if (screen) {
-            // Legg til både touch og mouse events
-            screen.addEventListener('touchstart', handleTouch, { passive: false });
-            screen.addEventListener('touchend', handleTouch, { passive: false });
-            screen.addEventListener('click', handleTouch, false);
-            
-            // iOS Safari fix: Gjør elementet eksplisitt klikkbart
-            screen.style.cursor = 'pointer';
-            screen.setAttribute('role', 'button');
         }
-    });
-}
 
         function setupMobileControls() {
             const mobileControls = document.getElementById('mobileControls');
@@ -1512,6 +1480,7 @@ function createFallbackSound(name) {
     }
     
     // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
+       // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
     switch(gameState) {
     case 'start':
         // Aksepter alle taster i stedet for bare Enter og Space
@@ -1559,55 +1528,6 @@ function createFallbackSound(name) {
         endGame();
         break;
 }
-}
-
-            function handleTouch(e) {
-    console.log('Touch/Click event:', e.type, 'on gameState:', gameState);
-    console.log('Event target:', e.target.id);
-    
-    // VIKTIG: Både preventDefault og stopPropagation for iOS Safari
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Visual feedback at du har fått touch
-    document.body.style.backgroundColor = 'darkblue';
-    setTimeout(() => {
-        document.body.style.backgroundColor = '#000';
-    }, 200);
-    
-    switch(gameState) {
-        case 'start':
-            console.log('Calling showIntroScreen from touch');
-            showIntroScreen();
-            break;
-        case 'intro':
-            if (!introTextComplete) {
-                console.log('Completing intro text from touch');
-                completeIntroText();
-            } else {
-                console.log('Starting game from touch');
-                startGame();
-            }
-            break;
-        case 'levelComplete':
-            console.log('Going to next level from touch');
-            nextLevel();
-            break;
-        case 'credits':
-            console.log('Going to highscores from touch');
-            showHighscores();
-            break;
-        case 'highscores':
-            console.log('Going to game over from touch');
-            showScreen('gameOver');
-            break;
-        case 'victory':
-            console.log('Ending game from touch');
-            endGame();
-            break;
-        default:
-            console.log('Unhandled gameState in touch:', gameState);
-    }
 }
         // Definer playBackgroundMusic funksjon globalt
         function playBackgroundMusic(level) {
@@ -4630,7 +4550,6 @@ function restartGame() {
         document.getElementById('mobileControls').style.display = 'none';
     }
 }
-}     
-</script>
+    </script>
 </body>
 </html>
