@@ -211,37 +211,49 @@
         }
 
         #mobileControls {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            display: none;
-            justify-content: space-around;
-            padding: 10px;
-            z-index: 15;
-        }
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 
-        #mobileControls .control-btn {
-            background: linear-gradient(145deg, #1a1a1a, #2d2d2d);
-            color: #39FF14;
-            padding: 20px 30px;
-            border-radius: 50px;
-            font-size: 24px;
-            border: 2px solid #39FF14;
-            text-shadow: 0 0 5px #39FF14;
-            box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            transition: all 0.1s ease;
-        }
+/* Legg til visuell feedback for drag-området */
+#gameCanvas {
+    cursor: crosshair;
+}
 
-        #mobileControls .control-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 0 20px rgba(57, 255, 20, 0.6);
-            background: linear-gradient(145deg, #2d2d2d, #1a1a1a);
-        }
-        
+@media (hover: none) and (pointer: coarse) {
+    /* Mobile-spesifikke stilarter */
+    #gameCanvas {
+        cursor: none; /* Skjul cursor på mobile */
+    }
+    
+    /* Legg til subtilt hint nederst på skjermen */
+    #gameContainer::after {
+        content: 'DRAG TO MOVE • AUTO-FIRE ACTIVE';
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.8rem;
+        text-align: center;
+        pointer-events: none;
+        z-index: 1;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 5px 10px;
+        border-radius: 15px;
+        opacity: 0;
+        animation: fadeInOut 8s ease-out;
+    }
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { opacity: 0; }
+}
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.3; }
@@ -1137,14 +1149,19 @@ function createFallbackSound(name) {
             document.getElementById('submitScoreBtn').addEventListener('click', () => submitHighscore());
         }
 
-        function setupMobileControls() {
+         // Erstatt HELE din setupMobileControls funksjon med denne:
+
+function setupMobileControls() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 'ontouchstart' in window;
     
     if (!isMobile) return;
     
-    // Skjul de gamle knappene
+    console.log("Setting up mobile drag controls...");
+    
+    // SKJUL og FJERN DE GAMLE KNAPPENE FULLSTENDIG
     const mobileControls = document.getElementById('mobileControls');
     mobileControls.style.display = 'none';
+    mobileControls.style.visibility = 'hidden';
     
     // Variabler for touch tracking
     let isDragging = false;
@@ -1153,16 +1170,21 @@ function createFallbackSound(name) {
     let lastTouchX = 0;
     let lastTouchTime = 0;
     let playerStartX = 0;
+    let touchEventListenersAdded = false;
     
     // Autofire for mobile
     let autoFireInterval = null;
+    let autoFireActive = false;
     
-    // Start autofire når spillet starter
+    // Start autofire
     function startAutoFire() {
-        if (autoFireInterval) clearInterval(autoFireInterval);
+        if (autoFireInterval || autoFireActive) return; // Forhindre duplikater
+        
+        autoFireActive = true;
+        console.log("Starting autofire...");
         
         autoFireInterval = setInterval(() => {
-            if (gameState === 'playing') {
+            if (gameState === 'playing' && autoFireActive) {
                 const currentTime = Date.now();
                 if (currentTime - lastShot > BULLET_COOLDOWN) {
                     // Samme logikk som i updatePlayer for skytning
@@ -1195,13 +1217,17 @@ function createFallbackSound(name) {
             clearInterval(autoFireInterval);
             autoFireInterval = null;
         }
+        autoFireActive = false;
+        console.log("Stopping autofire...");
     }
     
     // Touch start handler
     function handleTouchStart(e) {
+        // BARE håndter touches i spillområdet
         if (gameState !== 'playing') return;
         
         e.preventDefault();
+        e.stopPropagation();
         
         const touch = e.touches[0];
         touchStartX = touch.clientX;
@@ -1210,6 +1236,8 @@ function createFallbackSound(name) {
         playerStartX = playerX;
         isDragging = true;
         lastTouchTime = Date.now();
+        
+        console.log("Touch started - dragging enabled, autofire starting");
         
         // Start autofire når spilleren begynner å røre skjermen
         startAutoFire();
@@ -1225,6 +1253,7 @@ function createFallbackSound(name) {
         if (!isDragging || gameState !== 'playing') return;
         
         e.preventDefault();
+        e.stopPropagation();
         
         const touch = e.touches[0];
         const currentTouchX = touch.clientX;
@@ -1232,8 +1261,13 @@ function createFallbackSound(name) {
         // Beregn hvor mye fingeren har beveget seg siden start
         const deltaX = currentTouchX - touchStartX;
         
+        // Konverter skjerm-koordinater til canvas-koordinater
+        const rect = gameCanvas.getBoundingClientRect();
+        const scaleX = SCREEN_WIDTH / rect.width;
+        const adjustedDelta = deltaX * scaleX;
+        
         // Beregn ny posisjon basert på fingerens bevegelse
-        let newPlayerX = playerStartX + deltaX;
+        let newPlayerX = playerStartX + adjustedDelta;
         
         // Hold spilleren innenfor skjermen
         const maxX = SCREEN_WIDTH - PLAYER_WIDTH;
@@ -1249,7 +1283,10 @@ function createFallbackSound(name) {
     // Touch end handler
     function handleTouchEnd(e) {
         e.preventDefault();
+        e.stopPropagation();
+        
         isDragging = false;
+        console.log("Touch ended - stopping autofire");
         
         // Stopp autofire når spilleren slipper skjermen
         stopAutoFire();
@@ -1261,18 +1298,26 @@ function createFallbackSound(name) {
     // Touch cancel handler (når finger går utenfor område)
     function handleTouchCancel(e) {
         e.preventDefault();
+        e.stopPropagation();
+        
         isDragging = false;
         stopAutoFire();
         keys = {};
+        console.log("Touch cancelled");
     }
     
-    // Legg til event listeners kun på spillområdet
-    const gameContainer = document.getElementById('gameContainer');
-    
-    gameContainer.addEventListener('touchstart', handleTouchStart, { passive: false });
-    gameContainer.addEventListener('touchmove', handleTouchMove, { passive: false });
-    gameContainer.addEventListener('touchend', handleTouchEnd, { passive: false });
-    gameContainer.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+    // Legg til event listeners på dokumentet
+    function addTouchEventListeners() {
+        if (touchEventListenersAdded) return;
+        
+        console.log("Adding touch event listeners...");
+        document.addEventListener('touchstart', handleTouchStart, { passive: false });
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        document.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+        
+        touchEventListenersAdded = true;
+    }
     
     // Forhindre scrolling og zooming
     document.addEventListener('touchmove', function(e) {
@@ -1281,16 +1326,19 @@ function createFallbackSound(name) {
         }
     }, { passive: false });
     
-    // Cleanup autofire når spillet ikke er aktivt
-    const originalShowScreen = showScreen;
-    showScreen = function(screenName) {
+    // Legg til event listeners umiddelbart
+    addTouchEventListeners();
+    
+    // Override showScreen funksjonen for å sikre autofire stopper
+    const originalShowScreen = window.showScreen;
+    window.showScreen = function(screenName) {
         if (screenName !== 'playing') {
             stopAutoFire();
         }
-        return originalShowScreen(screenName);
+        return originalShowScreen.call(this, screenName);
     };
     
-    console.log("Mobile drag controls initialized");
+    console.log("Mobile drag controls initialized successfully");
 }
         // Oppdatert levelComplete funksjon med animert poengtelling
         function levelComplete() {
