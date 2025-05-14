@@ -91,10 +91,44 @@
         }
 
         #introScreen {
-            color: #fff;
-            text-align: center;
-        }
+    cursor: pointer;
+    /* Gjør hele skjermen klikkbar */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 10;
+    
+    /* Bedre touch handling */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
 
+/* Legg til en synlig indikator for at skjermen er klikkbar */
+#introScreen::after {
+    content: 'TAP TO CONTINUE';
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+    text-align: center;
+    animation: pulse 2s infinite;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    #introScreen::after {
+        bottom: 10px;
+        font-size: 0.7rem;
+    }
         #story {
             margin: 20px auto;
             max-width: 80%;
@@ -1645,6 +1679,8 @@ let morseIsPlaying = false;
 let introStartTime = 0;
 let totalIntroTextLength = 0;
 
+// Legg til denne forbedrede versjonen av showIntroScreen:
+
 function showIntroScreen() {
     console.log("Showing intro screen");
     showScreen('intro');
@@ -1658,7 +1694,7 @@ function showIntroScreen() {
         introTitle.style.fontSize = '3rem';
     }
     
-    // Resten av intro-koden...
+    // Reset intro variables
     introTextTimer = 0;
     currentIntroLine = 0;
     currentIntroChar = 0;
@@ -1673,10 +1709,52 @@ function showIntroScreen() {
     // Sett starttid
     introStartTime = Date.now();
     
+    // VIKTIG: Legg til en synlig touch/click handler for intro-skjermen
+    const introScreen = document.getElementById('introScreen');
+    
+    // Fjern eksisterende touch handlers på intro screen
+    const newIntroScreen = introScreen.cloneNode(true);
+    introScreen.parentNode.replaceChild(newIntroScreen, introScreen);
+    
+    // Legg til click/touch handler direkte på intro screen
+    newIntroScreen.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        console.log("Direct touch on intro screen");
+        
+        if (!introTextComplete) {
+            completeIntroText();
+        } else {
+            startGame();
+        }
+    }, { passive: false });
+    
+    newIntroScreen.addEventListener('click', function(e) {
+        e.preventDefault();
+        console.log("Direct click on intro screen");
+        
+        if (!introTextComplete) {
+            completeIntroText();
+        } else {
+            startGame();
+        }
+    });
+    
     // Start the intro text animation
     animateIntroText();
+    
+    // EMERGENCY BACKUP: Auto-proceed after 20 seconds if no interaction
+    setTimeout(() => {
+        if (gameState === 'intro') {
+            console.log("Auto-proceeding from intro screen after timeout");
+            if (!introTextComplete) {
+                completeIntroText();
+                setTimeout(() => startGame(), 1000);
+            } else {
+                startGame();
+            }
+        }
+    }, 20000);
 }
-
 function animateIntroText() {
     if (gameState !== 'intro') return;
 
@@ -4571,27 +4649,85 @@ function restartGame() {
             }
         }
         function setupUniversalTouchHandler() {
-            let touchStartTime = 0;
+    let touchStartTime = 0;
+    let touchProcessed = false;
+    
+    // Mer omfattende touch handler for alle skjermer
+    function handleUniversalTouch(e) {
+        // Unngå flere behandlinger av samme touch
+        if (touchProcessed) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        touchStartTime = Date.now();
+        touchProcessed = true;
+        
+        // Kort forsinkelse for å unngå utilsiktede touch
+        setTimeout(() => {
+            console.log(`Touch detected in state: ${gameState}`);
             
-            document.addEventListener('touchstart', function(e) {
-                touchStartTime = Date.now();
-                
-                // Handle game states that need touch input
-                if (gameState === 'start' || gameState === 'levelComplete' || gameState === 'victory') {
-                    // Prevent accidental touches by requiring minimum touch duration
-                    setTimeout(() => {
-                        if (Date.now() - touchStartTime >= 100) {
-                            // Simulate appropriate key press based on game state
-                            const keyEvent = new KeyboardEvent('keydown', { 
-                                key: gameState === 'start' ? 'Enter' : ' ',
-                                code: gameState === 'start' ? 'Enter' : 'Space'
-                            });
-                            handleKeyPress(keyEvent);
-                        }
-                    }, 100);
-                }
-            }, { passive: false });
-        }
+            // Håndter forskjellige game states
+            switch(gameState) {
+                case 'start':
+                    console.log("Touch on start screen - showing intro");
+                    showIntroScreen();
+                    break;
+                    
+                case 'intro':
+                    if (!introTextComplete) {
+                        console.log("Touch during intro - completing text");
+                        completeIntroText();
+                    } else {
+                        console.log("Touch after intro complete - starting game");
+                        startGame();
+                    }
+                    break;
+                    
+                case 'levelComplete':
+                    console.log("Touch on level complete - proceeding");
+                    nextLevel();
+                    break;
+                    
+                case 'victory':
+                    console.log("Touch on victory screen - ending game");
+                    endGame();
+                    break;
+                    
+                case 'gameOver':
+                    // For game over, don't handle general touches
+                    // Let specific button touches handle this
+                    break;
+                    
+                case 'highscores':
+                    // Return to game over screen
+                    showScreen('gameOver');
+                    break;
+                    
+                case 'credits':
+                    // Return to highscores
+                    showHighscores();
+                    break;
+            }
+            
+            // Reset the flag after a delay
+            setTimeout(() => {
+                touchProcessed = false;
+            }, 500);
+        }, 100);
+    }
+    
+    // Legg til touch event listeners
+    document.addEventListener('touchstart', handleUniversalTouch, { 
+        passive: false, 
+        capture: true 
+    });
+    
+    // Også håndter vanlige klikk for desktop og testing
+    document.addEventListener('click', handleUniversalTouch, { 
+        capture: true 
+    });
+}
     </script>
 </body>
 </html>
