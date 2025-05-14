@@ -1708,13 +1708,6 @@ function createFallbackSound(name) {
             document.getElementById('submitScoreBtn').addEventListener('click', () => submitHighscore());
         }
 
-let mobileControlsInitialized = false;
-let isDragging = false;
-let touchStartX = 0;
-let playerStartX = 0;
-let autoFireInterval = null;
-let autoFireActive = false;
-let currentTouchId = null;
 
 function setupMobileControls() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 'ontouchstart' in window;
