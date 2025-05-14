@@ -4,8 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EVIL INVADERS II</title>
+    
+    <!-- PWA Manifest for iOS -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/images/icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    
     <style>
-        /* Inline CSS for å unngå path-problemer */
+        /* Din eksisterende CSS... (beholder alt som det var) */
         body, html {
             margin: 0;
             padding: 0;
@@ -13,6 +21,15 @@
             height: 100%;
             overflow: hidden;
             background-color: #000;
+            /* Forbedret touch-handling */
+            touch-action: manipulation;
+            -webkit-overflow-scrolling: touch;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
 
         #gameContainer {
@@ -170,18 +187,27 @@
             z-index: 15;
         }
 
-        #mobileControls div {
-            background-color: rgba(0, 0, 0, 0.6);
-            color: #fff;
-            padding: 15px 25px;
+        #mobileControls .control-btn {
+            background: linear-gradient(145deg, #1a1a1a, #2d2d2d);
+            color: #39FF14;
+            padding: 20px 30px;
             border-radius: 50px;
             font-size: 24px;
             border: 2px solid #39FF14;
             text-shadow: 0 0 5px #39FF14;
+            box-shadow: 0 0 15px rgba(57, 255, 20, 0.3);
             user-select: none;
             -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: all 0.1s ease;
         }
 
+        #mobileControls .control-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.6);
+            background: linear-gradient(145deg, #2d2d2d, #1a1a1a);
+        }
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.3; }
@@ -252,47 +278,24 @@
             background-color: rgba(57, 255, 20, 0.2);
         }
 
-        @media (max-width: 768px) {
-            .press-enter {
-                font-size: 1.5rem;
-                padding: 10px;
+     @media (max-width: 768px) {
+            #gameCanvas, #overlayCanvas {
+                width: 100vw !important;
+                height: 100vh !important;
             }
             
-            .story-line {
-                font-size: 1rem;
-            }
-            
-            #levelStartScreen {
-                font-size: 2.5rem;
-            }
-            
-            #countdownTimer {
-                font-size: 4rem;
+            #mobileControls .control-btn {
+                padding: 18px 25px;
+                font-size: 22px;
             }
         }
 
         @media (max-width: 480px) {
-            .press-enter {
-                font-size: 1.2rem;
-                padding: 8px;
-            }
-            
-            .story-line {
-                font-size: 0.9rem;
-            }
-            
-            #levelStartScreen {
-                font-size: 2rem;
-            }
-            
-            #countdownTimer {
-                font-size: 3rem;
+            #mobileControls .control-btn {
+                padding: 15px 20px;
+                font-size: 18px;
             }
         }
-        #initialScreen h1 {
-        margin-bottom: 40px;
-        font-size: 3rem;
-    }
     
     #musicPlayButton {
         position: absolute;
@@ -436,9 +439,9 @@
 
         <!-- Mobile Controls -->
         <div id="mobileControls">
-            <div id="moveLeftBtn">←</div>
-            <div id="fireBtn">FIRE</div>
-            <div id="moveRightBtn">→</div>
+            <div class="control-btn" id="moveLeftBtn">←</div>
+            <div class="control-btn" id="fireBtn">FIRE</div>
+            <div class="control-btn" id="moveRightBtn">→</div>
         </div>
     </div>
     <!-- Firebase SDK -->
@@ -446,6 +449,13 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <script>
+    if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => console.log('SW registered: ', registration))
+                    .catch(registrationError => console.log('SW registration failed: ', registrationError));
+            });
+        }
   // Din Firebase konfigurasjon
   const firebaseConfig = {
     apiKey: "AIzaSyBHQSa-gRonCbOS-y8eGyq9gQEY9ritBNY",
@@ -593,7 +603,7 @@
 
         // Initialize the game when the window loads
         // Endrer window.onload for å bruke loadAssets i stedet for createMockAssets
-        window.onload = function() {
+window.addEventListener('load', function() {
     console.log("Window loaded");
     gameCanvas = document.getElementById('gameCanvas');
     gameCtx = gameCanvas.getContext('2d');
@@ -603,6 +613,7 @@
     gameCtx.imageSmoothingQuality = 'high';
     overlayCtx.imageSmoothingEnabled = false;
     overlayCtx.imageSmoothingQuality = 'high';
+    
     // Initialize event listeners
     initEventListeners();
 
@@ -613,14 +624,13 @@
     // Create a very simple initial screen before the actual title screen
     createInitialScreen();
     
-    // Setup mobile controls if on a touch device
-    if ('ontouchstart' in window) {
-        setupMobileControls();
-    }
+    // Setup mobile controls and touch handlers
+    setupMobileControls();
+    setupUniversalTouchHandler();
     
     console.log("Game initialized");
-};
-
+});
+        
 // Add this new function to create the initial screen
 function createInitialScreen() {
     // Create a new div for the initial screen
@@ -1095,43 +1105,51 @@ function createFallbackSound(name) {
 
         function setupMobileControls() {
             const mobileControls = document.getElementById('mobileControls');
-            mobileControls.style.display = 'flex';
+            
+            // Detect if device is mobile
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 'ontouchstart' in window;
+            
+            if (isMobile) {
+                mobileControls.style.display = 'flex';
+                
+                const moveLeftBtn = document.getElementById('moveLeftBtn');
+                const moveRightBtn = document.getElementById('moveRightBtn');
+                const fireBtn = document.getElementById('fireBtn');
 
-            const moveLeftBtn = document.getElementById('moveLeftBtn');
-            const moveRightBtn = document.getElementById('moveRightBtn');
-            const fireBtn = document.getElementById('fireBtn');
+                // Prevent scrolling and zooming on mobile
+                document.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
 
-            // Left button
-            moveLeftBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys['ArrowLeft'] = true;
-            });
-            moveLeftBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keys['ArrowLeft'] = false;
-            });
+                // Improved touch handlers with haptic feedback
+                function addTouchHandler(element, key) {
+                    element.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        keys[key] = true;
+                        
+                        // Add haptic feedback if available
+                        if (navigator.vibrate) {
+                            navigator.vibrate(50);
+                        }
+                    }, { passive: false });
+                    
+                    element.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        keys[key] = false;
+                    }, { passive: false });
+                    
+                    // Handle touch cancel (when finger leaves button area)
+                    element.addEventListener('touchcancel', (e) => {
+                        e.preventDefault();
+                        keys[key] = false;
+                    }, { passive: false });
+                }
 
-            // Right button
-            moveRightBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys['ArrowRight'] = true;
-            });
-            moveRightBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keys['ArrowRight'] = false;
-            });
-
-            // Fire button
-            fireBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys[' '] = true;
-            });
-            fireBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keys[' '] = false;
-            });
+                addTouchHandler(moveLeftBtn, 'ArrowLeft');
+                addTouchHandler(moveRightBtn, 'ArrowRight');
+                addTouchHandler(fireBtn, ' ');
+            }
         }
-
         // Oppdatert levelComplete funksjon med animert poengtelling
         function levelComplete() {
     // Stopp gameloop først
@@ -4545,13 +4563,35 @@ function restartGame() {
         gameState = 'playing';
     }
     
-    // Show mobile controls only during gameplay
-    if (screenName === 'playing' && 'ontouchstart' in window) {
-        document.getElementById('mobileControls').style.display = 'flex';
-    } else {
-        document.getElementById('mobileControls').style.display = 'none';
-    }
-}
+     const mobileControls = document.getElementById('mobileControls');
+            if (screenName === 'playing' && (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 'ontouchstart' in window)) {
+                mobileControls.style.display = 'flex';
+            } else {
+                mobileControls.style.display = 'none';
+            }
+        }
+        function setupUniversalTouchHandler() {
+            let touchStartTime = 0;
+            
+            document.addEventListener('touchstart', function(e) {
+                touchStartTime = Date.now();
+                
+                // Handle game states that need touch input
+                if (gameState === 'start' || gameState === 'levelComplete' || gameState === 'victory') {
+                    // Prevent accidental touches by requiring minimum touch duration
+                    setTimeout(() => {
+                        if (Date.now() - touchStartTime >= 100) {
+                            // Simulate appropriate key press based on game state
+                            const keyEvent = new KeyboardEvent('keydown', { 
+                                key: gameState === 'start' ? 'Enter' : ' ',
+                                code: gameState === 'start' ? 'Enter' : 'Space'
+                            });
+                            handleKeyPress(keyEvent);
+                        }
+                    }, 100);
+                }
+            }, { passive: false });
+        }
     </script>
 </body>
 </html>
