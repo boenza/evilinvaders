@@ -32,6 +32,521 @@
             user-select: none;
         }
 
+        // Load game assets
+        async function loadAssets() {
+            console.log("Starting to load assets");
+            
+            // Load images
+            const imagesToLoad = [
+                { name: 'player', src: 'assets/images/player.png' },
+                { name: 'playerLvl3', src: 'assets/images/new_player_ship_lvl3.png' },
+                { name: 'playerLvl6', src: 'assets/images/new_player_ship_lvl6.png' },
+                { name: 'playerLvl9', src: 'assets/images/new_player_ship_lvl9.png' },
+                { name: 'ufo1', src: 'assets/images/ufo1.png' },
+                { name: 'ufo2', src: 'assets/images/ufo2.png' },
+                { name: 'ufo3', src: 'assets/images/ufo3.png' },
+                { name: 'ufo4', src: 'assets/images/ufo4.png' },
+                { name: 'bossLvl5', src: 'assets/images/large_ufo_level5.png' },
+                { name: 'bossLvl10', src: 'assets/images/large_ufo_level10.png' },
+                { name: 'explosion1', src: 'assets/images/explosion1.png' },
+                { name: 'explosion2', src: 'assets/images/explosion2.png' },
+                { name: 'explosion3', src: 'assets/images/explosion3.png' },
+                { name: 'explosion4', src: 'assets/images/explosion4.png' },
+                { name: 'explosion5', src: 'assets/images/explosion5.png' },
+                { name: 'diamond', src: 'assets/images/diamond.png' },
+                { name: 'extralife', src: 'assets/images/extralife.svg' },
+                { name: 'asteroid', src: 'assets/images/asteroid.png' },
+                { name: 'background1', src: 'assets/images/background1.webp' },
+                { name: 'background2', src: 'assets/images/background2.webp' },
+                { name: 'background3', src: 'assets/images/background3.webp' },
+                { name: 'background4', src: 'assets/images/background4.webp' },
+                { name: 'background5', src: 'assets/images/background5.webp' },
+                { name: 'background6', src: 'assets/images/background6.webp' },
+                { name: 'background7', src: 'assets/images/background7.webp' },
+                { name: 'background8', src: 'assets/images/background8.webp' },
+                { name: 'background9', src: 'assets/images/background9.webp' },
+                { name: 'background10', src: 'assets/images/background10.webp' }
+            ];
+
+            const imagePromises = imagesToLoad.map(img => {
+                return new Promise((resolve) => {
+                    const image = new Image();
+                    image.onload = () => {
+                        gameImages[img.name] = image;
+                        resolve();
+                    };
+                    image.onerror = () => {
+                        createFallbackImage(img.name);
+                        resolve();
+                    };
+                    image.src = img.src;
+                });
+            });
+
+            await Promise.all(imagePromises);
+            console.log("All images processed");
+
+            // Load sounds
+            const soundsToLoad = [
+                { name: 'shoot', src: 'assets/sounds/shoot.wav' },
+                { name: 'explosion', src: 'assets/sounds/explosion.wav' },
+                { name: 'hit', src: 'assets/sounds/hit.wav' },
+                { name: 'powerup', src: 'assets/sounds/powerup.mp3' },
+                { name: 'counter', src: 'assets/sounds/counter.wav' },
+                { name: 'morse', src: 'assets/sounds/morse.mp3' }
+            ];
+
+            soundsToLoad.forEach(sound => {
+                try {
+                    console.log(`Setting up sound: ${sound.name} at ${sound.src}`);
+                    
+                    gameSounds[sound.name] = {
+                        play: function() {
+                            try {
+                                const audio = new Audio(sound.src);
+                                if (sound.name === 'morse') {
+                                    audio.volume = 0.45;
+                                } else if (sound.name === 'shoot' || sound.name === 'hit' || sound.name === 'explosion') {
+                                    audio.volume = 0.15;
+                                } else {
+                                    audio.volume = 0.5;
+                                }
+                                
+                                const playPromise = audio.play();
+                                
+                                if (playPromise !== undefined) {
+                                    playPromise.catch(e => {
+                                        console.warn(`Could not play ${sound.name} sound: ${e.message}`);
+                                    });
+                                }
+                                
+                                return audio;
+                            } catch (e) {
+                                console.error(`Error playing ${sound.name} sound:`, e);
+                                return null;
+                            }
+                        }
+                    };
+                } catch (e) {
+                    console.error(`Failed to create sound: ${sound.name}`, e);
+                    createFallbackSound(sound.name);
+                }
+            });
+
+            // Setup typing sound
+            typingSound = new Audio('assets/sounds/morse.mp3');
+            typingSound.volume = 0.05;
+            typingSound.addEventListener('canplaythrough', function() {
+                typingSoundReady = true;
+                console.log("Typing sound ready");
+            });
+            typingSound.addEventListener('error', function(e) {
+                console.warn("Error loading typing sound:", e);
+                typingSoundReady = false;
+            });
+            typingSound.load();
+
+            // Setup background music
+            setupBackgroundMusic();
+
+            console.log("Asset loading complete");
+            return Promise.resolve();
+        }
+
+        // Create fallback assets when real ones fail to load
+        function createMockAssets() {
+            console.log("Creating mock assets");
+            
+            // Create mock images
+            const imageNames = ['player', 'playerLvl3', 'playerLvl6', 'playerLvl9', 
+                               'ufo1', 'ufo2', 'ufo3', 'ufo4', 'bossLvl5', 'bossLvl10',
+                               'explosion1', 'explosion2', 'explosion3', 'explosion4', 'explosion5',
+                               'diamond', 'extralife', 'asteroid'];
+                               
+            for (let i = 1; i <= 10; i++) {
+                imageNames.push(`background${i}`);
+            }
+            
+            imageNames.forEach(name => {
+                createFallbackImage(name);
+            });
+            
+            // Create mock sounds
+            const soundNames = ['shoot', 'explosion', 'hit', 'powerup', 'counter', 'morse'];
+            soundNames.forEach(name => {
+                createFallbackSound(name);
+            });
+            
+            // Setup typing sound fallback
+            typingSound = {
+                play: () => console.log("[Typing sound]"),
+                pause: () => {},
+                load: () => {},
+                addEventListener: () => {},
+                volume: 0.05,
+                currentTime: 0
+            };
+            typingSoundReady = true;
+            
+            // Setup background music fallback
+            backgroundMusic = {
+                play: () => Promise.resolve(),
+                pause: () => {},
+                load: () => {},
+                addEventListener: () => {},
+                volume: 0.3,
+                loop: true,
+                paused: true,
+                src: '',
+                currentTime: 0
+            };
+        }
+
+        function createFallbackImage(name) {
+            console.log(`Creating fallback image for: ${name}`);
+            
+            let width = 50;
+            let height = 50;
+            let color = '#FFFFFF';
+            let isBackground = false;
+            
+            if (name.includes('player')) {
+                width = 60;
+                height = 50;
+                color = '#39FF14';
+            } else if (name.includes('ufo')) {
+                width = 50;
+                height = 30;
+                color = '#FF14A3';
+            } else if (name.includes('boss')) {
+                width = name.includes('Lvl10') ? 150 : 100;
+                height = name.includes('Lvl10') ? 120 : 80;
+                color = '#FF0000';
+            } else if (name.includes('explosion')) {
+                width = 50;
+                height = 50;
+                color = '#FFFF00';
+            } else if (name.includes('background')) {
+                width = 800;
+                height = 600;
+                color = '#000033';
+                isBackground = true;
+            } else if (name === 'diamond') {
+                width = 40;
+                height = 40;
+                color = '#00FFFF';
+            } else if (name === 'extralife') {
+                width = 40;
+                height = 40;
+                color = '#FF3E61';
+            } else if (name === 'asteroid') {
+                width = 40;
+                height = 40;
+                color = '#39FF14';
+            }
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            if (isBackground) {
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, width, height);
+                
+                ctx.fillStyle = '#FFFFFF';
+                for (let i = 0; i < 100; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const size = Math.random() * 2 + 1;
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } else {
+                ctx.fillStyle = color;
+                ctx.fillRect(0, 0, width, height);
+                
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(2, 2, width - 4, height - 4);
+                
+                ctx.fillStyle = '#000000';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(name, width / 2, height / 2);
+            }
+            
+            gameImages[name] = canvas;
+        }
+
+        function createFallbackSound(name) {
+            console.log(`Creating fallback sound for: ${name}`);
+            
+            gameSounds[name] = {
+                play: function() {
+                    console.log(`[Sound effect: ${name}]`);
+                }
+            };
+        }
+
+        function preloadTypingSound() {
+            console.log("Preloading typing sound");
+            typingSound = new Audio('assets/sounds/morse.mp3');
+            typingSound.volume = 0.05;
+            typingSound.addEventListener('canplaythrough', function() {
+                typingSoundReady = true;
+                console.log("Typing sound ready");
+            });
+            typingSound.addEventListener('error', function(e) {
+                console.warn("Error loading typing sound:", e);
+                typingSoundReady = false;
+            });
+            typingSound.load();
+        }
+
+        function setupBackgroundMusic() {
+            console.log("Setting up background music system");
+            
+            backgroundMusic = new Audio();
+            backgroundMusic.loop = true;
+            backgroundMusic.volume = 0.3;
+            
+            backgroundMusic.addEventListener('canplay', () => {
+                console.log("Background music can play now: " + backgroundMusic.src);
+            });
+            
+            backgroundMusic.addEventListener('playing', () => {
+                console.log("Background music started playing: " + backgroundMusic.src);
+            });
+            
+            backgroundMusic.addEventListener('error', (e) => {
+                console.error("Background music error:", e);
+                console.log("Failed source:", backgroundMusic.src);
+            });
+            
+            testMusicFiles();
+        }
+
+        async function testMusicFiles() {
+            const musicFiles = [
+                'assets/sounds/Evil Invaders.mp3',
+                'assets/sounds/background_music1.mp3',
+                'assets/sounds/background_music2.mp3'
+            ];
+            
+            console.log("Testing music file availability...");
+            
+            for (const file of musicFiles) {
+                try {
+                    const response = await fetch(file, { method: 'HEAD' });
+                    console.log(`${file}: ${response.ok ? 'Available' : 'Not available'} (${response.status})`);
+                } catch (error) {
+                    console.error(`${file}: Error testing - ${error.message}`);
+                }
+            }
+        }
+
+        function initEventListeners() {
+            console.log("Initializing event listeners");
+            
+            window.addEventListener('keydown', (e) => {
+                keys[e.key] = true;
+                handleKeyPress(e);
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keys[e.key] = false;
+            });
+
+            document.getElementById('retryBtn').addEventListener('click', () => restartGame());
+            document.getElementById('exitBtn').addEventListener('click', () => {
+                if (screenRotationTimer) {
+                    clearInterval(screenRotationTimer);
+                }
+                location.reload();
+            });
+            document.getElementById('highscoresBtn').addEventListener('click', () => showHighscores());
+            document.getElementById('backToGameOverBtn').addEventListener('click', () => showScreen('gameOver'));
+            document.getElementById('submitScoreBtn').addEventListener('click', () => submitHighscore());
+        }
+
+        function setupMobileControls() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 'ontouchstart' in window;
+            
+            if (!isMobile || mobileControlsInitialized) return;
+            
+            console.log("Setting up comprehensive mobile controls...");
+            
+            const mobileControls = document.getElementById('mobileControls');
+            if (mobileControls) {
+                mobileControls.style.display = 'none';
+                mobileControls.style.visibility = 'hidden';
+            }
+            
+            function startAutoFire() {
+                if (autoFireActive) return;
+                autoFireActive = true;
+                
+                if (autoFireInterval) clearInterval(autoFireInterval);
+                
+                autoFireInterval = setInterval(() => {
+                    if (gameState === 'playing' && autoFireActive) {
+                        const currentTime = Date.now();
+                        if (currentTime - lastShot > BULLET_COOLDOWN) {
+                            if (laserCount === 1) {
+                                createBullet(playerX + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2, playerY);
+                            } else if (laserCount === 2) {
+                                const offset = 10;
+                                createBullet(playerX + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2 - offset, playerY);
+                                createBullet(playerX + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2 + offset, playerY);
+                            } else if (laserCount >= 4) {
+                                const offset = 20;
+                                createBullet(playerX + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2 - offset, playerY);
+                                createBullet(playerX + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2 - offset / 2, playerY);
+                                createBullet(playerX + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2 + offset / 2, playerY);
+                                createBullet(playerX + PLAYER_WIDTH / 2 - BULLET_WIDTH / 2 + offset, playerY);
+                            }
+                            
+                            lastShot = currentTime;
+                            if (gameSounds.shoot) {
+                                gameSounds.shoot.play();
+                            }
+                        }
+                    }
+                }, BULLET_COOLDOWN / 2);
+            }
+            
+            function stopAutoFire() {
+                autoFireActive = false;
+                if (autoFireInterval) {
+                    clearInterval(autoFireInterval);
+                    autoFireInterval = null;
+                }
+            }
+            
+            function handleTouchStart(e) {
+                const touch = e.touches[0];
+                currentTouchId = touch.identifier;
+                
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') {
+                    return;
+                }
+                
+                if (gameState === 'playing') {
+                    const rect = gameCanvas.getBoundingClientRect();
+                    const touchY = touch.clientY - rect.top;
+                    
+                    if (touchY > rect.height * 0.33) {
+                        e.preventDefault();
+                        touchStartX = touch.clientX;
+                        playerStartX = playerX;
+                        isDragging = true;
+                        startAutoFire();
+                        
+                        if (navigator.vibrate) {
+                            navigator.vibrate(20);
+                        }
+                    }
+                } else if (gameState !== 'gameOver' || !e.target.closest('#highscoreInput')) {
+                    e.preventDefault();
+                    
+                    setTimeout(() => {
+                        switch(gameState) {
+                            case 'start':
+                                showIntroScreen();
+                                break;
+                            case 'intro':
+                                if (!introTextComplete) {
+                                    completeIntroText();
+                                } else {
+                                    startGame();
+                                }
+                                break;
+                            case 'levelComplete':
+                                nextLevel();
+                                break;
+                            case 'victory':
+                                endGame();
+                                break;
+                            case 'highscores':
+                                showScreen('gameOver');
+                                break;
+                            case 'credits':
+                                showHighscores();
+                                break;
+                        }
+                    }, 50);
+                }
+            }
+            
+            function handleTouchMove(e) {
+                if (!isDragging || gameState !== 'playing') return;
+                
+                let touch = null;
+                for (let i = 0; i < e.touches.length; i++) {
+                    if (e.touches[i].identifier === currentTouchId) {
+                        touch = e.touches[i];
+                        break;
+                    }
+                }
+                
+                if (!touch) return;
+                
+                e.preventDefault();
+                
+                const deltaX = touch.clientX - touchStartX;
+                const rect = gameCanvas.getBoundingClientRect();
+                const scaleX = SCREEN_WIDTH / rect.width;
+                const adjustedDelta = deltaX * scaleX;
+                
+                let newPlayerX = playerStartX + adjustedDelta;
+                newPlayerX = Math.max(0, Math.min(newPlayerX, SCREEN_WIDTH - PLAYER_WIDTH));
+                playerX = playerX * 0.7 + newPlayerX * 0.3;
+            }
+            
+            function handleTouchEnd(e) {
+                if (gameState === 'playing') {
+                    if (currentTouchId !== null) {
+                        let touchStillActive = false;
+                        for (let i = 0; i < e.touches.length; i++) {
+                            if (e.touches[i].identifier === currentTouchId) {
+                                touchStillActive = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!touchStillActive) {
+                            isDragging = false;
+                            stopAutoFire();
+                            currentTouchId = null;
+                        }
+                    }
+                }
+            }
+            
+            function handleTouchCancel(e) {
+                isDragging = false;
+                stopAutoFire();
+                currentTouchId = null;
+            }
+            
+            function preventScrolling(e) {
+                if (gameState === 'playing' || (gameState !== 'gameOver' && e.target.tagName !== 'INPUT')) {
+                    e.preventDefault();
+                }
+            }
+            
+            document.addEventListener('touchstart', handleTouchStart, { passive: false });
+            document.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.addEventListener('touchend', handleTouchEnd, { passive: false });
+            document.addEventListener('touchcancel', handleTouchCancel, { passive: false });
+            document.addEventListener('touchmove', preventScrolling, { passive: false });
+            
+            mobileControlsInitialized = true;
+            console.log("Mobile controls initialized successfully");
+        }
+
         #gameContainer {
             width: 100vw;
             height: 100vh;
@@ -91,44 +606,46 @@
         }
 
         #introScreen {
-    cursor: pointer;
-    /* Gjør hele skjermen klikkbar */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-color: rgba(0, 0, 0, 0.9);
-    z-index: 10;
-    
-    /* Bedre touch handling */
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-}
+            cursor: pointer;
+            /* Gjør hele skjermen klikkbar */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 10;
+            
+            /* Bedre touch handling */
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-/* Legg til en synlig indikator for at skjermen er klikkbar */
-#introScreen::after {
-    content: 'TAP TO CONTINUE';
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.8rem;
-    text-align: center;
-    animation: pulse 2s infinite;
-    pointer-events: none;
-}
+        /* Legg til en synlig indikator for at skjermen er klikkbar */
+        #introScreen::after {
+            content: 'TAP TO CONTINUE';
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.8rem;
+            text-align: center;
+            animation: pulse 2s infinite;
+            pointer-events: none;
+        }
 
-@media (max-width: 768px) {
-    #introScreen::after {
-        bottom: 10px;
-        font-size: 0.7rem;
-    }
+        @media (max-width: 768px) {
+            #introScreen::after {
+                bottom: 10px;
+                font-size: 0.7rem;
+            }
+        }
+
         #story {
             margin: 20px auto;
             max-width: 80%;
@@ -210,79 +727,82 @@
             font-size: 1.5rem;
         }
 
-       /* Forbedret mobile touch area og performance */
+        /* Forbedret mobile touch area og performance */
 
-#mobileControls {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
+        #mobileControls {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
 
-/* Større touch-område for mobile */
-@media (hover: none) and (pointer: coarse) {
-    #gameCanvas {
-        cursor: none;
-        /* Sikre touch-events registreres på hele canvas */
-        touch-action: none;
-    }
-    
-    /* Større touch-område indikator */
-    #gameContainer::before {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 66.6%; /* 2/3 av skjermen */
-        background: linear-gradient(180deg, transparent 0%, rgba(57, 255, 20, 0.1) 100%);
-        pointer-events: none;
-        z-index: 1;
-        opacity: 0.6;
-    }
-    
-    /* Instruksjonstekst som vises første gang */
-    #gameContainer.first-time::after {
-        content: 'LARGER TOUCH AREA • DRAG ANYWHERE IN LOWER AREA';
-        position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: #39FF14;
-        font-size: 0.9rem;
-        text-align: center;
-        background: rgba(0, 0, 0, 0.8);
-        padding: 8px 15px;
-        border-radius: 20px;
-        border: 1px solid #39FF14;
-        opacity: 0;
-        animation: showTouch 6s ease-out;
-        pointer-events: none;
-        z-index: 20;
-    }
-}
+        /* Større touch-område for mobile */
+        @media (hover: none) and (pointer: coarse) {
+            #gameCanvas {
+                cursor: none;
+                /* Sikre touch-events registreres på hele canvas */
+                touch-action: none;
+            }
+            
+            /* Større touch-område indikator */
+            #gameContainer::before {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 66.6%; /* 2/3 av skjermen */
+                background: linear-gradient(180deg, transparent 0%, rgba(57, 255, 20, 0.1) 100%);
+                pointer-events: none;
+                z-index: 1;
+                opacity: 0.6;
+            }
+            
+            /* Instruksjonstekst som vises første gang */
+            #gameContainer.first-time::after {
+                content: 'LARGER TOUCH AREA • DRAG ANYWHERE IN LOWER AREA';
+                position: absolute;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: #39FF14;
+                font-size: 0.9rem;
+                text-align: center;
+                background: rgba(0, 0, 0, 0.8);
+                padding: 8px 15px;
+                border-radius: 20px;
+                border: 1px solid #39FF14;
+                opacity: 0;
+                animation: showTouch 6s ease-out;
+                pointer-events: none;
+                z-index: 20;
+            }
+        }
 
-@keyframes showTouch {
-    0% { opacity: 0; }
-    15% { opacity: 1; }
-    85% { opacity: 1; }
-    100% { opacity: 0; }
+        @keyframes showTouch {
+            0% { opacity: 0; }
+            15% { opacity: 1; }
+            85% { opacity: 1; }
+            100% { opacity: 0; }
+        }
 
-/* Performance optimizations */
-* {
-    -webkit-transform: translate3d(0, 0, 0);
-    transform: translate3d(0, 0, 0);
-}
+        /* Performance optimizations */
+        * {
+            -webkit-transform: translate3d(0, 0, 0);
+            transform: translate3d(0, 0, 0);
+        }
 
-#gameCanvas, #overlayCanvas {
-    will-change: transform;
-}
-@keyframes fadeInOut {
-    0% { opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { opacity: 0; }
-}
+        #gameCanvas, #overlayCanvas {
+            will-change: transform;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.3; }
@@ -353,7 +873,7 @@
             background-color: rgba(57, 255, 20, 0.2);
         }
 
-     @media (max-width: 768px) {
+        @media (max-width: 768px) {
             #gameCanvas, #overlayCanvas {
                 width: 100vw !important;
                 height: 100vh !important;
@@ -372,68 +892,69 @@
             }
         }
     
-    #musicPlayButton {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 1000;
-        padding: 5px 10px;
-        background-color: rgba(0, 0, 0, 0.7);
-        color: #39FF14;
-        border: 2px solid #39FF14;
-        border-radius: 5px;
-        cursor: pointer;
-        text-shadow: 0 0 5px #39FF14;
-    }
-    #highscoreList {
-    width: 90%;
-    max-width: 800px;
-    margin: 0 auto 30px auto;
-    max-height: 70vh;
-    overflow-y: auto;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 10px;
-    border: 1px solid rgba(57, 255, 20, 0.3);
-}
+        #musicPlayButton {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            padding: 5px 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #39FF14;
+            border: 2px solid #39FF14;
+            border-radius: 5px;
+            cursor: pointer;
+            text-shadow: 0 0 5px #39FF14;
+        }
 
-.highscore-item {
-    display: grid;
-    grid-template-columns: 0.7fr 2fr 1fr 0.7fr;
-    padding: 8px 0;
-    margin-bottom: 5px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
+        #highscoreList {
+            width: 90%;
+            max-width: 800px;
+            margin: 0 auto 30px auto;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            border: 1px solid rgba(57, 255, 20, 0.3);
+        }
 
-/* Styling for scrollbar */
-#highscoreList::-webkit-scrollbar {
-    width: 10px;
-}
+        .highscore-item {
+            display: grid;
+            grid-template-columns: 0.7fr 2fr 1fr 0.7fr;
+            padding: 8px 0;
+            margin-bottom: 5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
 
-#highscoreList::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.5);
-    border-radius: 5px;
-}
+        /* Styling for scrollbar */
+        #highscoreList::-webkit-scrollbar {
+            width: 10px;
+        }
 
-#highscoreList::-webkit-scrollbar-thumb {
-    background: #39FF14;
-    border-radius: 5px;
-}
+        #highscoreList::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+        }
 
-#highscoreList::-webkit-scrollbar-thumb:hover {
-    background: #FFFF66;
-}
+        #highscoreList::-webkit-scrollbar-thumb {
+            background: #39FF14;
+            border-radius: 5px;
+        }
+
+        #highscoreList::-webkit-scrollbar-thumb:hover {
+            background: #FFFF66;
+        }
     
-    /* Add improved animations for text pulsing */
-    @keyframes textPulse {
-        0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6; opacity: 1; }
-        50% { text-shadow: 0 0 2px #fff, 0 0 5px #0073e6; opacity: 0.7; }
-        100% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6; opacity: 1; }
-    }
-    
-    .text-pulse {
-        animation: textPulse 1.5s infinite;
-    }
+        /* Add improved animations for text pulsing */
+        @keyframes textPulse {
+            0% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6; opacity: 1; }
+            50% { text-shadow: 0 0 2px #fff, 0 0 5px #0073e6; opacity: 0.7; }
+            100% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #0073e6, 0 0 20px #0073e6; opacity: 1; }
+        }
+        
+        .text-pulse {
+            animation: textPulse 1.5s infinite;
+        }
     </style>
 </head>
 <body>
@@ -484,8 +1005,7 @@
                 <button id="submitScoreBtn">SUBMIT</button>
             </div>
         </div>
-            <button id="backFromCreditsBtn" style="display: none;">BACK</button>
-        </div>
+
         <!-- Highscores Screen -->
         <div id="highscoresScreen" class="hidden">
             <h1>HIGH SCORES</h1>
@@ -510,7 +1030,6 @@
             <div class="neon-pink">FINAL SCORE: <span id="finalScore">0</span></div>
             <div class="press-enter neon-text blink">PRESS ANY KEY TO CONTINUE</div>
         </div>
-    
 
         <!-- Mobile Controls -->
         <div id="mobileControls">
@@ -519,35 +1038,34 @@
             <div class="control-btn" id="moveRightBtn">→</div>
         </div>
     </div>
-    <!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-<script>
-    if ('serviceWorker' in navigator) {
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
                     .then(registration => console.log('SW registered: ', registration))
                     .catch(registrationError => console.log('SW registration failed: ', registrationError));
             });
         }
-  // Din Firebase konfigurasjon
-  const firebaseConfig = {
-    apiKey: "AIzaSyBHQSa-gRonCbOS-y8eGyq9gQEY9ritBNY",
-    authDomain: "evil-invaders-ii.firebaseapp.com",
-    projectId: "evil-invaders-ii",
-    storageBucket: "evil-invaders-ii.firebasestorage.app",
-    messagingSenderId: "354911968962",
-    appId: "1:354911968962:web:9dbab52240137e8a85655b"
-  };
 
-  // Initialiser Firebase
-  firebase.initializeApp(firebaseConfig);
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBHQSa-gRonCbOS-y8eGyq9gQEY9ritBNY",
+            authDomain: "evil-invaders-ii.firebaseapp.com",
+            projectId: "evil-invaders-ii",
+            storageBucket: "evil-invaders-ii.firebasestorage.app",
+            messagingSenderId: "354911968962",
+            appId: "1:354911968962:web:9dbab52240137e8a85655b"
+        };
 
-  // Få en Firestore instans
-  const db = firebase.firestore();
-</script>
-    <script>
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         // Game Constants
         const SCREEN_WIDTH = 800;
         const SCREEN_HEIGHT = 600;
@@ -589,11 +1107,12 @@
             NEON_GREEN: '#39FF14',
             NEON_PINK: '#FF14A3'
         };
-const PERFORMANCE_MODE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        const PERFORMANCE_MODE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
         // Game Variables
         let gameCanvas, gameCtx, overlayCanvas, overlayCtx;
-        let gameState = 'start'; // start, intro, playing, levelStart, gameOver, levelComplete, victory, highscores
+        let gameState = 'start';
         let gameLoop, animationFrameId;
         let screenWidth = 800;
         let screenHeight = 600;
@@ -620,7 +1139,7 @@ const PERFORMANCE_MODE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Ope
         let introTextComplete = false;
         let levelStartCountdown = 3;
         let countdownTimer = null;
-        let lavaDragDrop = 1; // 1 in 1000 chance
+        let lavaDragDrop = 1;
         let gameImages = {};
         let gameSounds = {};
         let autoFireEnabled = false;
@@ -637,16 +1156,8 @@ const PERFORMANCE_MODE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Ope
         let asteroidTimer = 0;
         let asteroidSpawnInterval = 2000;
         let levelParTimes = {
-            1: 30000,
-            2: 35000,
-            3: 40000,
-            4: 45000,
-            5: 60000,
-            6: 50000,
-            7: 55000,
-            8: 60000,
-            9: 65000,
-            10: 90000
+            1: 30000, 2: 35000, 3: 40000, 4: 45000, 5: 60000,
+            6: 50000, 7: 55000, 8: 60000, 9: 65000, 10: 90000
         };
         let touchActive = false;
         let typingSound = null;
@@ -655,7 +1166,16 @@ const PERFORMANCE_MODE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Ope
         let currentRotationScreen = 'gameOver';
         let isNewHighscore = false;
         let currentMusicTrack = null;
+        let backgroundMusic = new Audio();
 
+        // Mobile control variables
+        let mobileControlsInitialized = false;
+        let isDragging = false;
+        let touchStartX = 0;
+        let playerStartX = 0;
+        let autoFireInterval = null;
+        let autoFireActive = false;
+        let currentTouchId = null;
 
         // Story Text
         const introText = [
@@ -672,109 +1192,90 @@ const PERFORMANCE_MODE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Ope
             "Lock. Load. Light 'em up!"
         ];
 
-        // Definer backgroundMusic globalt
-        let backgroundMusic = new Audio();
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.5;
 
         // Initialize the game when the window loads
-        // Endrer window.onload for å bruke loadAssets i stedet for createMockAssets
-
         window.addEventListener('load', function() {
-    console.log("Window loaded");
-    gameCanvas = document.getElementById('gameCanvas');
-    gameCtx = gameCanvas.getContext('2d');
-    overlayCanvas = document.getElementById('overlayCanvas');
-    overlayCtx = overlayCanvas.getContext('2d');
-    gameCtx.imageSmoothingEnabled = false;
-    gameCtx.imageSmoothingQuality = 'high';
-    overlayCtx.imageSmoothingEnabled = false;
-    overlayCtx.imageSmoothingQuality = 'high';
-    
-    // Initialize event listeners
-    initEventListeners();
-
-    // Initialize highscores
-    loadHighscores();
-    preloadTypingSound();
-    
-    // Create a very simple initial screen before the actual title screen
-    createInitialScreen();
-    
-    // BARE setup mobile controls - IKKE setupUniversalTouchHandler
-    setupMobileControls();
-    
-    console.log("Game initialized");
-});
-// Add this new function to create the initial screen
-function createInitialScreen() {
-    // Create a new div for the initial screen
-    const initialScreen = document.createElement('div');
-    initialScreen.id = 'initialScreen';
-    initialScreen.style.position = 'absolute';
-    initialScreen.style.top = '0';
-    initialScreen.style.left = '0';
-    initialScreen.style.width = '100%';
-    initialScreen.style.height = '100%';
-    initialScreen.style.backgroundColor = '#000';
-    initialScreen.style.display = 'flex';
-    initialScreen.style.flexDirection = 'column';
-    initialScreen.style.justifyContent = 'center';
-    initialScreen.style.alignItems = 'center';
-    initialScreen.style.zIndex = '100';
-    
-    // Add title text
-    const title = document.createElement('h1');
-    title.textContent = 'EVIL INVADERS II';
-    title.className = 'neon-pink';
-    title.style.marginBottom = '20px';
-    
-    // Add instruction text
-    const instruction = document.createElement('div');
-    instruction.textContent = 'CLICK OR PRESS ANY KEY TO START';
-    instruction.className = 'press-enter neon-text blink';
-    instruction.style.padding = '15px';
-    instruction.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    instruction.style.borderRadius = '10px';
-    
-    // Add elements to the initial screen
-    initialScreen.appendChild(title);
-    initialScreen.appendChild(instruction);
-    
-    // Add the initial screen to the game container
-    document.getElementById('gameContainer').appendChild(initialScreen);
-    
-    // Event listeners for the initial screen
-    const handleInteraction = function() {
-        // Remove the initial screen
-        initialScreen.remove();
-        
-        // Load and prepare game assets
-        loadAssets().then(() => {
-            // Show the real title screen
-            showScreen('start');
+            console.log("Window loaded");
+            gameCanvas = document.getElementById('gameCanvas');
+            gameCtx = gameCanvas.getContext('2d');
+            overlayCanvas = document.getElementById('overlayCanvas');
+            overlayCtx = overlayCanvas.getContext('2d');
+            gameCtx.imageSmoothingEnabled = false;
+            gameCtx.imageSmoothingQuality = 'high';
+            overlayCtx.imageSmoothingEnabled = false;
+            overlayCtx.imageSmoothingQuality = 'high';
             
-            // Play background music (this is now allowed because the user has interacted)
-            playBackgroundMusic(0);
-        }).catch(error => {
-            console.error("Asset loading failed:", error);
-            createMockAssets();
-            showScreen('start');
-            playBackgroundMusic(0);
-        });
-        
-        // Remove event listeners
-        window.removeEventListener('click', handleInteraction);
-        window.removeEventListener('keydown', handleInteraction);
-        document.removeEventListener('touchstart', handleInteraction);
-    };
-    
-    // Add event listeners for clicks, key presses, and touches
-    window.addEventListener('click', handleInteraction);
-    window.addEventListener('keydown', handleInteraction);
-    document.addEventListener('touchstart', handleInteraction);
-}
+            // Initialize event listeners
+            initEventListeners();
 
+            // Initialize highscores
+            loadHighscores();
+            preloadTypingSound();
+            
+            // Create initial screen
+            createInitialScreen();
+            
+            // Setup mobile controls
+            setupMobileControls();
+            
+            console.log("Game initialized");
+        });
+
+        // Create initial screen
+        function createInitialScreen() {
+            const initialScreen = document.createElement('div');
+            initialScreen.id = 'initialScreen';
+            initialScreen.style.position = 'absolute';
+            initialScreen.style.top = '0';
+            initialScreen.style.left = '0';
+            initialScreen.style.width = '100%';
+            initialScreen.style.height = '100%';
+            initialScreen.style.backgroundColor = '#000';
+            initialScreen.style.display = 'flex';
+            initialScreen.style.flexDirection = 'column';
+            initialScreen.style.justifyContent = 'center';
+            initialScreen.style.alignItems = 'center';
+            initialScreen.style.zIndex = '100';
+            
+            const title = document.createElement('h1');
+            title.textContent = 'EVIL INVADERS II';
+            title.className = 'neon-pink';
+            title.style.marginBottom = '20px';
+            
+            const instruction = document.createElement('div');
+            instruction.textContent = 'CLICK OR PRESS ANY KEY TO START';
+            instruction.className = 'press-enter neon-text blink';
+            instruction.style.padding = '15px';
+            instruction.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            instruction.style.borderRadius = '10px';
+            
+            initialScreen.appendChild(title);
+            initialScreen.appendChild(instruction);
+            document.getElementById('gameContainer').appendChild(initialScreen);
+            
+            const handleInteraction = function() {
+                initialScreen.remove();
+                loadAssets().then(() => {
+                    showScreen('start');
+                    playBackgroundMusic(0);
+                }).catch(error => {
+                    console.error("Asset loading failed:", error);
+                    createMockAssets();
+                    showScreen('start');
+                    playBackgroundMusic(0);
+                });
+                
+                window.removeEventListener('click', handleInteraction);
+                window.removeEventListener('keydown', handleInteraction);
+                document.removeEventListener('touchstart', handleInteraction);
+            };
+            
+            window.addEventListener('click', handleInteraction);
+            window.addEventListener('keydown', handleInteraction);
+            document.addEventListener('touchstart', handleInteraction);
+        }
 
 // Oppdatert loadAssets funksjon med spesifikk fokus på lydfeilsøking
 // Oppdatert loadAssets-funksjon fokusert på de spesifikke lydfilene dine
