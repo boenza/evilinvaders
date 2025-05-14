@@ -467,7 +467,7 @@
         const SCREEN_WIDTH = 800;
         const SCREEN_HEIGHT = 600;
         const PLAYER_WIDTH = 60;
-        const PLAYER_HEIGHT = 50;
+        const PLAYER_HEIGHT = 60;
         const UFO_WIDTH = 50;
         const UFO_HEIGHT = 30;
         const UFO_ROWS = 4;
@@ -599,7 +599,10 @@
     gameCtx = gameCanvas.getContext('2d');
     overlayCanvas = document.getElementById('overlayCanvas');
     overlayCtx = overlayCanvas.getContext('2d');
-
+    gameCtx.imageSmoothingEnabled = false;
+    gameCtx.imageSmoothingQuality = 'high';
+    overlayCtx.imageSmoothingEnabled = false;
+    overlayCtx.imageSmoothingQuality = 'high';
     // Initialize event listeners
     initEventListeners();
 
@@ -1088,6 +1091,11 @@ function createFallbackSound(name) {
             document.getElementById('highscoresBtn').addEventListener('click', () => showHighscores());
             document.getElementById('backToGameOverBtn').addEventListener('click', () => showScreen('gameOver'));
             document.getElementById('submitScoreBtn').addEventListener('click', () => submitHighscore());
+            // Legg til berøringsstøtte for mobilenheter
+            function setupTouchListeners() {
+    // Legg til touch event listeners for hele dokumentet
+    document.addEventListener('touchstart', handleTouch, { passive: false });
+}
         }
 
         function setupMobileControls() {
@@ -1480,7 +1488,6 @@ function createFallbackSound(name) {
     }
     
     // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
-       // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
     switch(gameState) {
     case 'start':
         // Aksepter alle taster i stedet for bare Enter og Space
@@ -1529,6 +1536,39 @@ function createFallbackSound(name) {
         break;
 }
 }
+function handleTouch(e) {
+    console.log(`Touch event detected on screen: ${gameState}`);
+    
+    // Forhindre default touch-oppførsel
+    e.preventDefault();
+    
+    // Samme logikk som handleKeyPress, men for touch
+    switch(gameState) {
+        case 'start':
+            showIntroScreen();
+            break;
+        case 'intro':
+            if (!introTextComplete) {
+                completeIntroText();
+            } else {
+                startGame();
+            }
+            break;
+        case 'levelComplete':
+            nextLevel();
+            break;
+        case 'credits':
+            showHighscores();
+            break;
+        case 'highscores':
+            showScreen('gameOver');
+            break;
+        case 'victory':
+            endGame();
+            break;
+    }
+}     
+
         // Definer playBackgroundMusic funksjon globalt
         function playBackgroundMusic(level) {
     console.log(`Setting up background music for level ${level}`);
