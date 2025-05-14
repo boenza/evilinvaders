@@ -467,7 +467,7 @@
         const SCREEN_WIDTH = 800;
         const SCREEN_HEIGHT = 600;
         const PLAYER_WIDTH = 60;
-        const PLAYER_HEIGHT = 50;
+        const PLAYER_HEIGHT = 60;
         const UFO_WIDTH = 50;
         const UFO_HEIGHT = 30;
         const UFO_ROWS = 4;
@@ -599,7 +599,10 @@
     gameCtx = gameCanvas.getContext('2d');
     overlayCanvas = document.getElementById('overlayCanvas');
     overlayCtx = overlayCanvas.getContext('2d');
-
+    gameCtx.imageSmoothingEnabled = false;
+    gameCtx.imageSmoothingQuality = 'high';
+    overlayCtx.imageSmoothingEnabled = false;
+    overlayCtx.imageSmoothingQuality = 'high';
     // Initialize event listeners
     initEventListeners();
 
@@ -1480,7 +1483,6 @@ function createFallbackSound(name) {
     }
     
     // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
-       // Vanlig spillnavigasjon fortsetter kun hvis vi ikke er i input-modus
     switch(gameState) {
     case 'start':
         // Aksepter alle taster i stedet for bare Enter og Space
