@@ -1224,33 +1224,17 @@ function setupMobileControls() {
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.5;
 
-        // Initialize the game when the window loads
         window.addEventListener('load', function() {
-            console.log("Window loaded");
-            gameCanvas = document.getElementById('gameCanvas');
-            gameCtx = gameCanvas.getContext('2d');
-            overlayCanvas = document.getElementById('overlayCanvas');
-            overlayCtx = overlayCanvas.getContext('2d');
-            gameCtx.imageSmoothingEnabled = false;
-            gameCtx.imageSmoothingQuality = 'high';
-            overlayCtx.imageSmoothingEnabled = false;
-            overlayCtx.imageSmoothingQuality = 'high';
-            
-            // Initialize event listeners
-            initEventListeners();
+    initEventListeners();
+    loadHighscores();
+    preloadTypingSound();
+    
+    // Create initial screen – alt videre skjer i handleInteraction
+    createInitialScreen();
+    
+    console.log("Game initialized");
+});
 
-            // Initialize highscores
-            loadHighscores();
-            preloadTypingSound();
-            
-            // Create initial screen
-            createInitialScreen();
-            
-            // Setup mobile controls
-            setupMobileControls();
-            
-            console.log("Game initialized");
-        });
 
         // Create initial screen
         function createInitialScreen() {
@@ -1284,27 +1268,39 @@ function setupMobileControls() {
             initialScreen.appendChild(instruction);
             document.getElementById('gameContainer').appendChild(initialScreen);
             
-            const handleInteraction = function() {
-                initialScreen.remove();
-                loadAssets().then(() => {
-                    showScreen('start');
-                    playBackgroundMusic(0);
-                }).catch(error => {
-                    console.error("Asset loading failed:", error);
-                    createMockAssets();
-                    showScreen('start');
-                    playBackgroundMusic(0);
-                });
-                
-                window.removeEventListener('click', handleInteraction);
-                window.removeEventListener('keydown', handleInteraction);
-                document.removeEventListener('touchstart', handleInteraction);
-            };
             
-            window.addEventListener('click', handleInteraction);
-            window.addEventListener('keydown', handleInteraction);
-            document.addEventListener('touchstart', handleInteraction);
-        }
+         const handleInteraction = function() {
+    // Fjern åpningsskjermen
+    initialScreen.remove();
+
+    // Last inn alt – først når brukeren har “godkjent” via touch/klikk/tast
+    loadAssets().then(() => {
+        showScreen('start');
+        playBackgroundMusic(0);
+
+        // Nå som vi har interaksjon og ressursene er klare, sett opp mobil-kontroller
+        setupMobileControls();
+    }).catch(error => {
+        console.error("Asset loading failed:", error);
+        createMockAssets();
+        showScreen('start');
+        playBackgroundMusic(0);
+
+        // Også her: mobil-kontroller
+        setupMobileControls();
+    });
+
+    // Fjern lyttere så vi ikke starter flere ganger
+    window.removeEventListener('click', handleInteraction);
+    window.removeEventListener('keydown', handleInteraction);
+    document.removeEventListener('touchstart', handleInteraction);
+};
+
+window.addEventListener('click', handleInteraction);
+window.addEventListener('keydown', handleInteraction);
+// Hvis du ønsker å hindre scrolling på mobil:
+document.addEventListener('touchstart', handleInteraction, { passive: false });
+
 
 // Oppdatert loadAssets funksjon med spesifikk fokus på lydfeilsøking
 // Oppdatert loadAssets-funksjon fokusert på de spesifikke lydfilene dine
