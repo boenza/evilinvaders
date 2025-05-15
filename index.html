@@ -1237,69 +1237,69 @@ function setupMobileControls() {
 
 
         // Create initial screen
-        function createInitialScreen() {
-            const initialScreen = document.createElement('div');
-            initialScreen.id = 'initialScreen';
-            initialScreen.style.position = 'absolute';
-            initialScreen.style.top = '0';
-            initialScreen.style.left = '0';
-            initialScreen.style.width = '100%';
-            initialScreen.style.height = '100%';
-            initialScreen.style.backgroundColor = '#000';
-            initialScreen.style.display = 'flex';
-            initialScreen.style.flexDirection = 'column';
-            initialScreen.style.justifyContent = 'center';
-            initialScreen.style.alignItems = 'center';
-            initialScreen.style.zIndex = '100';
-            
-            const title = document.createElement('h1');
-            title.textContent = 'EVIL INVADERS II';
-            title.className = 'neon-pink';
-            title.style.marginBottom = '20px';
-            
-            const instruction = document.createElement('div');
-            instruction.textContent = 'CLICK OR PRESS ANY KEY TO START';
-            instruction.className = 'press-enter neon-text blink';
-            instruction.style.padding = '15px';
-            instruction.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-            instruction.style.borderRadius = '10px';
-            
-            initialScreen.appendChild(title);
-            initialScreen.appendChild(instruction);
-            document.getElementById('gameContainer').appendChild(initialScreen);
-            
-            
-         const handleInteraction = function() {
-    // Fjern åpningsskjermen
-    initialScreen.remove();
+function createInitialScreen() {
+    const initialScreen = document.createElement('div');
+    initialScreen.id = 'initialScreen';
+    initialScreen.style.position = 'absolute';
+    initialScreen.style.top = '0';
+    initialScreen.style.left = '0';
+    initialScreen.style.width = '100%';
+    initialScreen.style.height = '100%';
+    initialScreen.style.backgroundColor = '#000';
+    initialScreen.style.display = 'flex';
+    initialScreen.style.flexDirection = 'column';
+    initialScreen.style.justifyContent = 'center';
+    initialScreen.style.alignItems = 'center';
+    initialScreen.style.zIndex = '100';
+    
+    const title = document.createElement('h1');
+    title.textContent = 'EVIL INVADERS II';
+    title.className = 'neon-pink';
+    title.style.marginBottom = '20px';
+    
+    const instruction = document.createElement('div');
+    instruction.textContent = 'CLICK OR PRESS ANY KEY TO START';
+    instruction.className = 'press-enter neon-text blink';
+    instruction.style.padding = '15px';
+    instruction.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    instruction.style.borderRadius = '10px';
+    
+    initialScreen.appendChild(title);
+    initialScreen.appendChild(instruction);
+    document.getElementById('gameContainer').appendChild(initialScreen);
 
-    // Last inn alt – først når brukeren har “godkjent” via touch/klikk/tast
-    loadAssets().then(() => {
-        showScreen('start');
-        playBackgroundMusic(0);
+    const handleInteraction = function(e) {
+        // Hindre default scrolling/zoom på mobil
+        if (e.type === 'pointerdown') e.preventDefault();
 
-        // Nå som vi har interaksjon og ressursene er klare, sett opp mobil-kontroller
-        setupMobileControls();
-    }).catch(error => {
-        console.error("Asset loading failed:", error);
-        createMockAssets();
-        showScreen('start');
-        playBackgroundMusic(0);
+        // Fjern åpningsskjermen
+        initialScreen.remove();
 
-        // Også her: mobil-kontroller
-        setupMobileControls();
-    });
+        // Last inn assets og start spillet
+        loadAssets().then(() => {
+            showScreen('start');
+            playBackgroundMusic(0);
+            setupMobileControls();
+        }).catch(error => {
+            console.error("Asset loading failed:", error);
+            createMockAssets();
+            showScreen('start');
+            playBackgroundMusic(0);
+            setupMobileControls();
+        });
 
-    // Fjern lyttere så vi ikke starter flere ganger
-    window.removeEventListener('click', handleInteraction);
-    window.removeEventListener('keydown', handleInteraction);
-    document.removeEventListener('touchstart', handleInteraction);
-};
+        // Fjern lyttere så vi ikke starter flere ganger
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('keydown', handleInteraction);
+        document.removeEventListener('pointerdown', handleInteraction);
+    };
 
-window.addEventListener('click', handleInteraction);
-window.addEventListener('keydown', handleInteraction);
-// Hvis du ønsker å hindre scrolling på mobil:
-document.addEventListener('touchstart', handleInteraction, { passive: false });
+    // Registrer lyttere for mus, tast og touch/pointer
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+    document.addEventListener('pointerdown', handleInteraction, { passive: false });
+}
+
 
 
 // Oppdatert loadAssets funksjon med spesifikk fokus på lydfeilsøking
