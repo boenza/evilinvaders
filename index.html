@@ -2471,7 +2471,9 @@ function canPlayerBeUpgraded() {
                         ufo.x += Math.cos(ufo.spiralOffset) * 0.5;
                         ufo.y += Math.sin(ufo.spiralOffset) * 0.3;
                     }
-                    
+                    // FIXED: Round positions to prevent subpixel flicker
+                    ufo.x = Math.round(ufo.x);
+                    ufo.y = Math.round(ufo.y);
                     // FIXED: Handle edge collision and direction change AFTER all movement
                     let hitEdge = false;
                     if (ufo.x + ufo.width >= SCREEN_WIDTH) {
