@@ -4098,6 +4098,8 @@ if (window.stopVictoryAnimation) {
     // Massive final bonus for completing all 20 levels
     const finalBonus = lives * 200 + 10000;
     const finalScore = score + finalBonus;
+    score = finalScore;
+
     
     // Show victory screen with initial values
 document.getElementById('victoryCurrentScore').textContent = '0';
