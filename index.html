@@ -457,22 +457,26 @@
         </div>
 
         <!-- Level Complete Screen -->
-        <div id="levelCompleteScreen" class="hidden">
-            <h1 class="neon-pink">LEVEL <span id="completedLevel">1</span> COMPLETE!</h1>
-            <div class="neon-green">Score: <span id="currentScore">0</span></div>
-            <div class="neon-green">Time Bonus: <span id="timeBonus">0</span></div>
-            <div class="neon-green">Life Bonus: <span id="lifeBonus">0</span></div>
-            <div class="neon-yellow">Total Bonus: <span id="totalBonus">0</span></div>
-            <div class="press-enter neon-text blink">PRESS ENTER TO CONTINUE</div>
-        </div>
+<div id="levelCompleteScreen" class="hidden">
+    <h1 class="neon-pink">LEVEL <span id="completedLevel">1</span> COMPLETE!</h1>
+    <div class="neon-green">Score: <span id="currentScore">0</span></div>
+    <div class="neon-green">Life Bonus: <span id="lifeBonus">0</span></div>
+    <div class="neon-green">Time Bonus: <span id="timeBonus">0</span></div>
+    <div class="neon-green">Level UFOs Killed: <span id="levelKills">0</span></div>
+    <div class="neon-green">Total UFOs Killed: <span id="totalKills">0</span></div>
+    <div class="neon-yellow">Total Score: <span id="totalScore">0</span></div>
+    <div class="press-enter neon-text blink">PRESS ENTER TO CONTINUE</div>
+</div>
 
         <!-- Victory Screen -->
-        <div id="victoryScreen" class="hidden">
-            <h1 class="neon-text">GALAXY CONQUERED!</h1>
-            <div class="neon-green">FINAL BONUS: <span id="finalBonus">0</span></div>
-            <div class="neon-pink">FINAL SCORE: <span id="finalScore">0</span></div>
-            <div class="press-enter neon-text blink">PRESS ANY KEY TO CONTINUE</div>
-        </div>
+<div id="victoryScreen" class="hidden">
+    <h1 class="neon-text">GALAXY CONQUERED!</h1>
+    <div class="neon-green">Current Score: <span id="victoryCurrentScore">0</span></div>
+    <div class="neon-green">Final Bonus: <span id="finalBonus">0</span></div>
+    <div class="neon-purple">Total UFOs Destroyed: <span id="finalKills">0</span></div>
+    <div class="neon-pink">FINAL SCORE: <span id="finalScore">0</span></div>
+    <div class="press-enter neon-text blink">PRESS ANY KEY TO CONTINUE</div>
+</div>
 
         <!-- Mobile Controls -->
         <div id="mobileControls">
@@ -613,6 +617,8 @@
         let currentRotationScreen = 'gameOver';
         let isNewHighscore = false;
         let currentMusicTrack = null;
+        let levelUfoKills = 0;
+        let totalUfoKills = 0;
 
         // NEW: Extended game features
         let shieldActive = false;
@@ -830,45 +836,117 @@
             ];
 
             // Last hver lyd separat
-            soundsToLoad.forEach(sound => {
-                try {
-                    console.log(`Setting up sound: ${sound.name} at ${sound.src}`);
-                    
-                    // Opprett en enkel wrapper som lager nye instanser hver gang lyden spilles
-                    gameSounds[sound.name] = {
-                        play: function() {
-                            try {
-                                const audio = new Audio(sound.src);
-                                // Justert lydstyrke basert på lydtype
-                                if (sound.name === 'morse') {
-                                    audio.volume = 0.45; // Lavere volum for morse
-                                } else if (sound.name === 'shoot' || sound.name === 'hit' || sound.name === 'explosion') {
-                                    audio.volume = 0.15; // 30% reduksjon for shoot og hit
-                                } else {
-                                    audio.volume = 0.5; // Standard volum for andre lyder
-                                }
-                                
-                                const playPromise = audio.play();
-                                
-                                if (playPromise !== undefined) {
-                                    playPromise.catch(e => {
-                                        console.warn(`Could not play ${sound.name} sound: ${e.message}`);
-                                    });
-                                }
-                                
-                                return audio;
-                            } catch (e) {
-                                console.error(`Error playing ${sound.name} sound:`, e);
-                                return null;
+soundsToLoad.forEach(sound => {
+    try {
+        console.log(`Setting up sound: ${sound.name} at ${sound.src}`);
+        
+        // Spesiell håndtering for counter-lyd med global kontroll
+        if (sound.name === 'counter') {
+            // Global referanse til counter-lyd
+            window.currentCounterAudio = null;
+            window.allCounterAudios = []; // Hold styr på alle counter-lyder
+            
+            gameSounds[sound.name] = {
+                play: function() {
+                    try {
+                        // Stopp og rydd opp ALLE eksisterende counter-lyder
+                        window.allCounterAudios.forEach(audio => {
+                            if (audio && !audio.paused) {
+                                audio.pause();
+                                audio.currentTime = 0;
                             }
+                        });
+                        window.allCounterAudios = [];
+                        
+                        // Stopp hovedreferansen
+                        if (window.currentCounterAudio && !window.currentCounterAudio.paused) {
+                            window.currentCounterAudio.pause();
+                            window.currentCounterAudio.currentTime = 0;
                         }
-                    };
-                } catch (e) {
-                    console.error(`Failed to create sound: ${sound.name}`, e);
-                    createFallbackSound(sound.name);
-                }
-            });
+                        
+                        window.currentCounterAudio = new Audio(sound.src);
+                        window.currentCounterAudio.volume = 0.25;
+                        window.currentCounterAudio.loop = true; // FIXED: Loop the sound
 
+                        
+                        // Legg til i tracking array
+                        window.allCounterAudios.push(window.currentCounterAudio);
+                        
+                        const playPromise = window.currentCounterAudio.play();
+                        
+                        if (playPromise !== undefined) {
+                            playPromise.catch(e => {
+                                console.warn(`Could not play ${sound.name} sound: ${e.message}`);
+                            });
+                        }
+                        
+                        return window.currentCounterAudio;
+                    } catch (e) {
+                        console.error(`Error playing ${sound.name} sound:`, e);
+                        return null;
+                    }
+                },
+                stop: function() {
+    // Clear any running timer
+    if (window.counterSoundTimer) {
+        clearTimeout(window.counterSoundTimer);
+        window.counterSoundTimer = null;
+    }
+    
+    // Stopp ALLE counter-lyder
+    window.allCounterAudios.forEach(audio => {
+        if (audio) {
+            audio.pause();
+            audio.currentTime = 0;
+        }
+    });
+    window.allCounterAudios = [];
+    
+    if (window.currentCounterAudio) {
+        window.currentCounterAudio.pause();
+        window.currentCounterAudio.currentTime = 0;
+        window.currentCounterAudio = null;
+    }
+    
+    window.counterSoundPlaying = false; // FIXED: Reset flag
+}
+            };
+        } else {
+            // Opprett en enkel wrapper som lager nye instanser hver gang lyden spilles
+            gameSounds[sound.name] = {
+                play: function() {
+                    try {
+                        const audio = new Audio(sound.src);
+                        // Justert lydstyrke basert på lydtype
+                        if (sound.name === 'morse') {
+                            audio.volume = 0.45; // Lavere volum for morse
+                        } else if (sound.name === 'shoot' || sound.name === 'hit' || sound.name === 'explosion') {
+                            audio.volume = 0.15; // 30% reduksjon for shoot og hit
+                        } else {
+                            audio.volume = 0.5; // Standard volum for andre lyder
+                        }
+                        
+                        const playPromise = audio.play();
+                        
+                        if (playPromise !== undefined) {
+                            playPromise.catch(e => {
+                                console.warn(`Could not play ${sound.name} sound: ${e.message}`);
+                            });
+                        }
+                        
+                        return audio;
+                    } catch (e) {
+                        console.error(`Error playing ${sound.name} sound:`, e);
+                        return null;
+                    }
+                }
+            };
+        }
+    } catch (e) {
+        console.error(`Failed to create sound: ${sound.name}`, e);
+        createFallbackSound(sound.name);
+    }
+});
             // Spesifikt oppsett for typing-lyd
             typingSound = new Audio('assets/sounds/morse.mp3');
             typingSound.volume = 0.05;
@@ -1169,16 +1247,37 @@
         }
 
         // Forenklet fallback for lyder
-        function createFallbackSound(name) {
-            console.log(`Creating fallback sound for: ${name}`);
-            
-            // Enkel fallback-lyd som bare logger til konsollen
-            gameSounds[name] = {
-                play: function() {
-                    console.log(`[Sound effect: ${name}]`);
-                }
-            };
-        }
+function createFallbackSound(name) {
+    console.log(`Creating fallback sound for: ${name}`);
+    
+    // Spesiell håndtering for counter-lyd
+    if (name === 'counter') {
+        // Global referanse til counter-lyd
+        window.currentCounterAudio = null;
+        window.allCounterAudios = [];
+        
+        gameSounds[name] = {
+            play: function() {
+    console.log(`[Fallback Sound effect: ${name}] - Would loop if real audio`);
+    return null; // Return null since it's just a fallback
+},
+            stop: function() {
+                console.log(`[Fallback Stop sound: ${name}]`);
+                // Reset flags even in fallback
+                window.counterSoundPlaying = false;
+                window.allCounterAudios = [];
+                window.currentCounterAudio = null;
+            }
+        };
+    } else {
+        // Enkel fallback-lyd som bare logger til konsollen
+        gameSounds[name] = {
+            play: function() {
+                console.log(`[Fallback Sound effect: ${name}]`);
+            }
+        };
+    }
+}
 
         function preloadTypingSound() {
             console.log("Preloading typing sound");
@@ -1432,6 +1531,9 @@
             lives = 5;
             playerX = (SCREEN_WIDTH - PLAYER_WIDTH) / 2;
             playerY = SCREEN_HEIGHT - PLAYER_HEIGHT - 10;
+
+            levelUfoKills = 0;
+            totalUfoKills = 0;
             
             // Reset power-ups and weapons
             autoFireEnabled = false;
@@ -1541,10 +1643,12 @@ function canPlayerBeUpgraded() {
     
     // Reset level-specific flags
     levelExtraLifeDropped = false;
+    levelUfoKills = 0; 
+    levelExtraLifeDropped = false;
     
-    // FIXED: Guaranteed power-ups before boss levels + regular power-ups
-    if ([3, 5, 7, 9, 11, 12, 13, 15, 17, 19].includes(level) && canPlayerBeUpgraded()) {
+    if ([2, 3, 5, 7, 9, 11, 12, 13, 15, 17, 19].includes(level)) {
         createPowerup();
+        console.log(`🎯 Level ${level} power-up created!`);
     }
     
     // NEW: Guaranteed power-ups before boss levels if under-powered
@@ -1862,47 +1966,99 @@ function canPlayerBeUpgraded() {
             }
         }
 
-        function applyPowerup() {
-            console.log(`Applying powerup for level ${level}`);
-            if (level === 3) {
-                laserSpeed += 2; // Faster laser
-                autoFireEnabled = true; // Enable autofire
-            } else if (level === 5 || level === 15) {
-                laserCount = Math.min(laserCount + 1, 4); // Max 4 lasers
-            } else if (level === 7 || level === 17) {
-                // Shield power-up
-                activateShield();
-            } else if (level === 9) {
-                laserCount = 4; // Quad laser
-            } else if (level === 11) {
-                // Even faster laser + better autofire
-                laserSpeed += 3; // Extra speed boost
-                autoFireEnabled = true;
-                BULLET_COOLDOWN = Math.max(300, BULLET_COOLDOWN - 100); // Faster firing
-            } else if (level === 12) {
-                // UPDATED: 6x laser + ultra-fast laser from level 12!
-                laserCount = 6;
-                laserSpeed = BULLET_SPEED * 1.8; // Much faster
-                autoFireEnabled = true;
-                BULLET_COOLDOWN = 250; // Very fast firing
-                console.log("ULTIMATE FIREPOWER UNLOCKED!");
-            } else if (level === 13) {
-                // Extra speed boost if not already maxed
-                laserSpeed = Math.max(laserSpeed, BULLET_SPEED * 2);
-                activateShield(); // Give shield too for survival
-            } else if (level === 18) {
-                laserCount = 4; // Quad laser (backup)
-            } else if (level === 19) {
-                // MEGA Ultimate powerup - everything maxed
-                laserCount = 8; // UPDATED: 8x laser for final levels!
-                laserSpeed = BULLET_SPEED * 2.2;
-                autoFireEnabled = true;
-                BULLET_COOLDOWN = 200; // Insane firing rate
-                activateShield(); // Plus shield
-                console.log("MAXIMUM OVERDRIVE ACTIVATED!");
-            }
+        // FIXED: Level-based power-up progression - predictable upgrades
+function applyPowerup() {
+    console.log(`Applying level ${level} powerup - Current stats: Laser count: ${laserCount}, Speed: ${laserSpeed}, Cooldown: ${BULLET_COOLDOWN}`);
+    
+    let upgradeApplied = false;
+    
+    // Level-based progression system
+    if (level === 2) {
+        // Level 2: AutoFire
+        if (!autoFireEnabled) {
+            autoFireEnabled = true;
+            laserSpeed = Math.max(laserSpeed, BULLET_SPEED + 2);
+            BULLET_COOLDOWN = Math.max(400, BULLET_COOLDOWN);
+            console.log("🔥 AUTOFIRE ENABLED!");
+            upgradeApplied = true;
         }
-
+    } else if (level === 3) {
+        // Level 3: Double Laser
+        if (laserCount < 2) {
+            laserCount = 2;
+            console.log("💥 DOUBLE LASER!");
+            upgradeApplied = true;
+        }
+    } else if (level === 5) {
+        // Level 5: Triple Laser
+        if (laserCount < 3) {
+            laserCount = 3;
+            console.log("💥 TRIPLE LASER!");
+            upgradeApplied = true;
+        }
+    } else if (level === 7) {
+        // Level 7: Shield
+        activateShield();
+        upgradeApplied = true;
+    } else if (level === 9) {
+        // Level 9: Quad Laser
+        if (laserCount < 4) {
+            laserCount = 4;
+            console.log("💥 QUAD LASER!");
+            upgradeApplied = true;
+        }
+    } else if (level === 11) {
+        // Level 11: Faster Firing
+        if (BULLET_COOLDOWN > 300) {
+            BULLET_COOLDOWN = Math.max(300, BULLET_COOLDOWN - 100);
+            console.log("⚡ FASTER FIRING!");
+            upgradeApplied = true;
+        }
+    } else if (level === 12) {
+        // Level 12: Hexa Laser
+        if (laserCount < 6) {
+            laserCount = 6;
+            console.log("💥 HEXA LASER!");
+            upgradeApplied = true;
+        }
+    } else if (level === 13) {
+        // Level 13: Faster Lasers
+        if (laserSpeed < BULLET_SPEED * 1.8) {
+            laserSpeed = BULLET_SPEED * 1.8;
+            console.log("🚀 FASTER LASERS!");
+            upgradeApplied = true;
+        }
+    } else if (level === 15) {
+        // Level 15: Even Faster Firing
+        if (BULLET_COOLDOWN > 200) {
+            BULLET_COOLDOWN = 200;
+            console.log("⚡ ULTRA FAST FIRING!");
+            upgradeApplied = true;
+        }
+    } else if (level === 17) {
+        // Level 17: Shield
+        activateShield();
+        upgradeApplied = true;
+    } else if (level === 19) {
+        // Level 19: Octa Laser + Max Speed
+        if (laserCount < 8) {
+            laserCount = 8;
+            laserSpeed = BULLET_SPEED * 2.2;
+            console.log("💥 OCTA LASER - MAXIMUM FIREPOWER!");
+            upgradeApplied = true;
+        }
+    } else {
+        // For other levels or if already maxed, give shield
+        activateShield();
+        console.log("🛡️ SHIELD GRANTED!");
+        upgradeApplied = true;
+    }
+    
+    // Always play power-up sound when something is upgraded
+    if (upgradeApplied && gameSounds.powerup) {
+        gameSounds.powerup.play();
+    }
+}
         function createBullet(x, y) {
             bullets.push({
                 x: x,
@@ -2277,6 +2433,10 @@ function canPlayerBeUpgraded() {
                 if (ufoIndex > -1) {
                     ufos.splice(ufoIndex, 1);
                 }
+                if (!ufo.isLarge) { // Don't count boss kills
+                    levelUfoKills++;
+                    totalUfoKills++;
+                }
                 
                 // Spill eksplosjonslyd
                 if (gameSounds.explosion) {
@@ -2478,26 +2638,22 @@ function canPlayerBeUpgraded() {
                     let hitEdge = false;
                     if (ufo.x + ufo.width >= SCREEN_WIDTH) {
                         ufo.x = SCREEN_WIDTH - ufo.width;
-                        if (ufo.direction > 0) { // Only change direction if moving right
-                            ufo.direction = -1;
-                            hitEdge = true;
-                        }
+                        ufo.direction = -1;
+                        hitEdge = true;
                     } else if (ufo.x <= 0) {
                         ufo.x = 0;
-                        if (ufo.direction < 0) { // Only change direction if moving left
-                            ufo.direction = 1;
-                            hitEdge = true;
-                        }
+                        ufo.direction = 1;
+                        hitEdge = true;
                     }
                     
                     // Move down when hitting edge
-                    if (hitEdge) {
+                     if (hitEdge) {
                         let verticalStep;
                         if (ufo.isNewRow) {
-                            verticalStep = Math.max(2, ufo.height / (25 - Math.min(level, 18)));
+                            verticalStep = Math.max(8, ufo.height / (15 - Math.min(level, 12))); // CHANGED: økt fra 2 til 8
                         } else {
-                            const baseDivisor = Math.max(6, 10 - (level * 0.15));
-                            verticalStep = Math.max(3, ufo.height / baseDivisor); 
+                            const baseDivisor = Math.max(3, 6 - (level * 0.1)); // CHANGED: mye raskere progresjon
+                            verticalStep = Math.max(10, ufo.height / baseDivisor); // CHANGED: økt fra 3 til 10
                         }
                         
                         ufo.y += verticalStep;
@@ -3710,59 +3866,182 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
         // Rest of the functions (levelComplete, nextLevel, victory, etc.)
         // For brevity, I'll add the key remaining functions...
 
-        // EXTENDED: Level complete with enhanced bonus system for 20 levels
         function levelComplete() {
             if (gameLoop) {
                 cancelAnimationFrame(gameLoop);
                 gameLoop = null;
             }
-            
-            gameState = 'levelComplete';
-            console.log("Level complete! Starting score animation for level " + level);
-            
-            // Calculate bonuses - enhanced for 20 levels
-            const currentTime = Date.now();
-            const levelTime = currentTime - levelStartTime;
-            const parTime = levelParTimes[level] || 60000;
-            
-            let timeBonus = 0;
-            let baseBonusMultiplier = Math.floor((level - 1) / 5) + 1; // Increases every 5 levels
-            
-            if (level <= 5) {
-                const baseBonus = 50 * baseBonusMultiplier;
-                if (levelTime < parTime) {
-                    const multiplier = 6 - level;
-                    timeBonus = baseBonus + Math.floor((parTime - levelTime) / 1000) * 10 * multiplier;
-                } else {
-                    timeBonus = baseBonus;
-                }
-            } else {
-                if (levelTime < parTime) {
-                    timeBonus = Math.floor((parTime - levelTime) / 1000) * 10 * baseBonusMultiplier;
-                }
-            }
-            
-            const lifeBonus = lives * (50 + (level * 5)); // Increases with level
-            const totalBonus = timeBonus + lifeBonus;
-            
-            // Show level completion
-            document.getElementById('completedLevel').textContent = level;
-            document.getElementById('currentScore').textContent = score;
-            document.getElementById('timeBonus').textContent = timeBonus;
-            document.getElementById('lifeBonus').textContent = lifeBonus;
-            document.getElementById('totalBonus').textContent = totalBonus;
-            
-            document.getElementById('levelCompleteScreen').classList.remove('hidden');
-            
-            // Add bonus to score
-            score += totalBonus;
-            
-            console.log(`Level ${level} completed. Bonus points: ${totalBonus}`);
+    
+    gameState = 'levelComplete';
+    console.log("Level complete! Starting score animation for level " + level);
+    
+    // Calculate bonuses
+    const currentTime = Date.now();
+    const levelTime = currentTime - levelStartTime;
+    const parTime = levelParTimes[level] || 60000;
+    
+    let timeBonus = 0;
+    let baseBonusMultiplier = Math.floor((level - 1) / 5) + 1;
+    
+    if (level <= 5) {
+        const baseBonus = 50 * baseBonusMultiplier;
+        if (levelTime < parTime) {
+            const multiplier = 6 - level;
+            timeBonus = baseBonus + Math.floor((parTime - levelTime) / 1000) * 10 * multiplier;
+        } else {
+            timeBonus = baseBonus;
         }
+    } else {
+        if (levelTime < parTime) {
+            timeBonus = Math.floor((parTime - levelTime) / 1000) * 10 * baseBonusMultiplier;
+        }
+    }
+    
+    const lifeBonus = lives * (50 + (level * 5));
+    const totalBonus = timeBonus + lifeBonus;
+    
+    // Show level completion with initial values
+document.getElementById('completedLevel').textContent = level;
+document.getElementById('currentScore').textContent = '0';
+document.getElementById('lifeBonus').textContent = '0';
+document.getElementById('timeBonus').textContent = '0';
+document.getElementById('levelKills').textContent = '0';
+document.getElementById('totalKills').textContent = '0';
+document.getElementById('totalScore').textContent = '0';
 
+document.getElementById('levelCompleteScreen').classList.remove('hidden');
+
+// Calculate final total score
+const finalTotalScore = score + totalBonus;
+
+// Sequential animation with 6 phases
+const totalAnimationDuration = 6000; // 6 seconds total
+const phaseCount = 6;
+const phaseDuration = totalAnimationDuration / phaseCount; // 1 second per phase
+
+let currentPhase = 0;
+let phaseStartTime = Date.now();
+let lastSoundTime = 0;
+const soundInterval = 200;
+
+
+// Animation sequence: Score -> Life bonus -> Time bonus -> Level kills -> Total kills -> Total score
+const animationSequence = [
+    {
+        element: 'currentScore',
+        targetValue: score,
+        currentValue: 0
+    },
+    {
+        element: 'lifeBonus',
+        targetValue: lifeBonus,
+        currentValue: 0
+    },
+    {
+        element: 'timeBonus',
+        targetValue: timeBonus,
+        currentValue: 0
+    },
+    {
+        element: 'levelKills',
+        targetValue: levelUfoKills,
+        currentValue: 0
+    },
+    {
+        element: 'totalKills',
+        targetValue: totalUfoKills,
+        currentValue: totalUfoKills - levelUfoKills // Start from previous total
+    },
+    {
+        element: 'totalScore',
+        targetValue: finalTotalScore,
+        currentValue: 0
+    }
+];
+
+let animationStopped = false; // FIXED: Add control flag
+
+
+function animateScoresSequentially() {
+    const now = Date.now();
+    const totalElapsed = now - (phaseStartTime - currentPhase * phaseDuration);
+    
+    // Play counter sound - only start once, let it loop
+// Start counter sound once at beginning
+if (currentPhase === 0 && !window.counterSoundPlaying) {
+    console.log("🔊 Starting counter sound for score animation");
+    window.counterSoundPlaying = true;
+    if (gameSounds.counter) {
+        gameSounds.counter.play();
+    }
+ window.counterSoundTimer = setTimeout(() => {
+        console.log("⏰ Timer stopping counter sound after 6 seconds");
+        if (gameSounds.counter && gameSounds.counter.stop) {
+            gameSounds.counter.stop();
+        }
+    }, 6000); // Stop after 6 seconds
+}
+    
+    // Check if we should move to the next phase
+    const phaseElapsed = now - phaseStartTime;
+    if (phaseElapsed >= phaseDuration && currentPhase < phaseCount - 1) {
+        // Complete current phase
+        const currentAnim = animationSequence[currentPhase];
+        document.getElementById(currentAnim.element).textContent = currentAnim.targetValue;
+        
+        // Move to next phase
+        currentPhase++;
+        phaseStartTime = now;
+    }
+    
+    if (currentPhase < phaseCount) {
+        // Animate current phase
+        const currentAnim = animationSequence[currentPhase];
+        const phaseProgress = Math.min((now - phaseStartTime) / phaseDuration, 1);
+        
+        const currentValue = Math.floor(
+            currentAnim.currentValue + 
+            (currentAnim.targetValue - currentAnim.currentValue) * phaseProgress
+        );
+        
+        document.getElementById(currentAnim.element).textContent = currentValue;
+        
+        requestAnimationFrame(animateScoresSequentially);
+    } else {
+    // Animation complete - stop counter sound and set final values
+    console.log("🔇 Animation complete - stopping counter sound");
+    if (gameSounds.counter && gameSounds.counter.stop) {
+        gameSounds.counter.stop();
+    }
+    
+    // Ensure all values are set to their final targets
+    animationSequence.forEach(anim => {
+        document.getElementById(anim.element).textContent = anim.targetValue;
+    });
+    
+    // Update the actual game score
+    score = finalTotalScore;
+}
+}
+window.stopLevelCompleteAnimation = function() {
+    animationStopped = true;
+    if (gameSounds.counter && gameSounds.counter.stop) {
+        gameSounds.counter.stop();
+    }
+};
+
+// Start animation after a short delay
+setTimeout(animateScoresSequentially, 500);
+}
         // EXTENDED: Next level for 20 levels
         function nextLevel() {
             console.log("Advancing to next level");
+            if (window.stopLevelCompleteAnimation) {
+    window.stopLevelCompleteAnimation();
+}
+if (window.stopVictoryAnimation) {
+    window.stopVictoryAnimation();
+}
             
             // Skjul level complete screen først
             document.getElementById('levelCompleteScreen').classList.add('hidden');
@@ -3798,47 +4077,152 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
             }
         }
 
-        // EXTENDED: Victory function for completing all 20 levels
         function victory() {
-            console.log("All 20 levels completed! Ultimate Victory!");
-            
-            if (gameLoop) {
-                cancelAnimationFrame(gameLoop);
-                gameLoop = null;
-            }
-            
-            gameState = 'victory';
-            
-            // Clear remaining objects
-            bullets = [];
-            lavaDrops = [];
-            powerups = [];
-            extraLifeDrops = [];
-            explosions = [];
-            asteroids = [];
-            
-            // Massive final bonus for completing all 20 levels
-            const finalBonus = lives * 200 + 10000; // Extra 10000 bonus for completing all 20 levels!
-            score += finalBonus;
-            
-            // Update victory screen
-            document.getElementById('finalBonus').textContent = finalBonus;
-            document.getElementById('finalScore').textContent = score;
-            
-            // Show victory screen
-            showScreen('victory');
-            
-            // Play victory music
-            playBackgroundMusic(0);
-            
-            // Play victory sounds
-            if (gameSounds.powerup) {
-                gameSounds.powerup.play();
-                setTimeout(() => gameSounds.powerup.play(), 500);
-                setTimeout(() => gameSounds.powerup.play(), 1000);
-                setTimeout(() => gameSounds.powerup.play(), 1500);
-            }
+    console.log("All 20 levels completed! Ultimate Victory!");
+    
+    if (gameLoop) {
+        cancelAnimationFrame(gameLoop);
+        gameLoop = null;
+    }
+    
+    gameState = 'victory';
+    
+    // Clear remaining objects
+    bullets = [];
+    lavaDrops = [];
+    powerups = [];
+    extraLifeDrops = [];
+    explosions = [];
+    asteroids = [];
+    
+    // Massive final bonus for completing all 20 levels
+    const finalBonus = lives * 200 + 10000;
+    const finalScore = score + finalBonus;
+    
+    // Show victory screen with initial values
+document.getElementById('victoryCurrentScore').textContent = '0';
+document.getElementById('finalBonus').textContent = '0';
+document.getElementById('finalKills').textContent = '0';
+document.getElementById('finalScore').textContent = '0';
+
+showScreen('victory');
+playBackgroundMusic(0);
+
+// Sequential animation with 4 phases for victory
+const totalAnimationDuration = 5000; // 5 seconds total
+const phaseCount = 4;
+const phaseDuration = totalAnimationDuration / phaseCount; // 1.25 seconds per phase
+
+let currentPhase = 0;
+let phaseStartTime = Date.now();
+let lastSoundTime = 0;
+const soundInterval = 250;
+
+// Animation sequence: Current Score -> Final Bonus -> Total UFOs -> Final Score
+const victoryAnimationSequence = [
+    {
+        element: 'victoryCurrentScore',
+        targetValue: score,
+        currentValue: 0
+    },
+    {
+        element: 'finalBonus',
+        targetValue: finalBonus,
+        currentValue: 0
+    },
+    {
+        element: 'finalKills',
+        targetValue: totalUfoKills,
+        currentValue: 0
+    },
+    {
+        element: 'finalScore',
+        targetValue: finalScore,
+        currentValue: 0
+    }
+];
+
+let victoryAnimationStopped = false;
+
+function animateVictoryScoresSequentially() {
+    const now = Date.now();
+    
+    // Play counter sound - only start once, let it loop
+// Start counter sound once at beginning
+if (currentPhase === 0 && !window.counterSoundPlaying) {
+    console.log("🔊 Starting counter sound for score animation");
+    window.counterSoundPlaying = true;
+    if (gameSounds.counter) {
+        gameSounds.counter.play();
+    }
+// FIXED: Set timer to stop sound after animation duration
+window.counterSoundTimer = setTimeout(() => {
+    console.log("⏰ Timer stopping victory counter sound after 5 seconds");
+    if (gameSounds.counter && gameSounds.counter.stop) {
+        gameSounds.counter.stop();
+    }
+}, 5000); // Stop after 5 seconds for victory
+}
+    
+    // Check if we should move to the next phase
+    const phaseElapsed = now - phaseStartTime;
+    if (phaseElapsed >= phaseDuration && currentPhase < phaseCount - 1) {
+        // Complete current phase
+        const currentAnim = victoryAnimationSequence[currentPhase];
+        document.getElementById(currentAnim.element).textContent = currentAnim.targetValue;
+        
+        // Move to next phase
+        currentPhase++;
+        phaseStartTime = now;
+    }
+    
+    if (currentPhase < phaseCount) {
+        // Animate current phase
+        const currentAnim = victoryAnimationSequence[currentPhase];
+        const phaseProgress = Math.min((now - phaseStartTime) / phaseDuration, 1);
+        
+        const currentValue = Math.floor(
+            currentAnim.currentValue + 
+            (currentAnim.targetValue - currentAnim.currentValue) * phaseProgress
+        );
+        
+        document.getElementById(currentAnim.element).textContent = currentValue;
+        
+        requestAnimationFrame(animateVictoryScoresSequentially);
+    } else {
+    // Animation complete - stop counter sound and set final values
+    console.log("🔇 Animation complete - stopping counter sound");
+    if (gameSounds.counter && gameSounds.counter.stop) {
+        gameSounds.counter.stop();
+    }
+    
+    // Ensure all values are set to their final targets
+    animationSequence.forEach(anim => {
+        document.getElementById(anim.element).textContent = anim.targetValue;
+    });
+    
+    // Update the actual game score
+    score = finalTotalScore;
+
+        
+        // Victory sounds after animation
+        if (gameSounds.powerup) {
+            setTimeout(() => gameSounds.powerup.play(), 500);
+            setTimeout(() => gameSounds.powerup.play(), 1000);
+            setTimeout(() => gameSounds.powerup.play(), 1500);
         }
+    }
+}
+
+window.stopVictoryAnimation = function() {
+    victoryAnimationStopped = true;
+    if (gameSounds.counter && gameSounds.counter.stop) {
+        gameSounds.counter.stop();
+    }
+};
+// Start animation after a short delay
+setTimeout(animateVictoryScoresSequentially, 1000);
+}
 
         // EXTENDED: Boss explosion for all 4 boss levels
         function createBossExplosion(boss) {
@@ -4141,7 +4525,9 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 
         function showScreen(screenName) {
             console.log(`Showing screen: ${screenName} (current state: ${gameState})`);
-            
+            if (gameSounds.counter && gameSounds.counter.stop) {
+            gameSounds.counter.stop();
+            }
             // Save previous state for music handling
             const previousState = gameState;
             
@@ -4270,6 +4656,13 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 
         function restartGame() {
             console.log("Restarting game");
+            // FIXED: Stop any running animations
+if (window.stopLevelCompleteAnimation) {
+    window.stopLevelCompleteAnimation();
+}
+if (window.stopVictoryAnimation) {
+    window.stopVictoryAnimation();
+}
             
             if (screenRotationTimer) {
                 clearInterval(screenRotationTimer);
@@ -4285,6 +4678,13 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
 
         function endGame() {
             console.log("Ending game");
+            // FIXED: Stop any running animations
+if (window.stopLevelCompleteAnimation) {
+    window.stopLevelCompleteAnimation();
+}
+if (window.stopVictoryAnimation) {
+    window.stopVictoryAnimation();
+}
             const isHighscore = highscores.length < 10 || score > highscores[highscores.length - 1].score;
             
             if (isHighscore) {
